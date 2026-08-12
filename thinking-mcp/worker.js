@@ -50,7 +50,7 @@ async function runThinking(env, messages, options = {}) {
 function createServer(env) {
   const server = new McpServer({
     name: "thinking-mcp",
-    version: "1.0.0",
+    version: "1.1.0",
   });
 
   server.registerTool(
@@ -266,51 +266,18 @@ ${clamp(claim)}`;
   return server;
 }
 
-function unauthorized() {
-  return new Response("Unauthorized", {
-    status: 401,
-    headers: {
-      "content-type": "text/plain; charset=utf-8",
-      "www-authenticate": 'Bearer realm="thinking-mcp"',
-    },
-  });
-}
-
-function safeEqual(a, b) {
-  if (!a || !b || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-function checkAuth(request, env) {
-  const expected = env.MCP_AUTH_TOKEN;
-  if (!expected) {
-    return new Response(
-      "Server misconfigured: MCP_AUTH_TOKEN secret is required.",
-      { status: 500 }
-    );
-  }
-
-  const header = request.headers.get("authorization") || "";
-  if (!header.startsWith("Bearer ")) return unauthorized();
-
-  const supplied = header.slice(7).trim();
-  return safeEqual(supplied, expected) ? null : unauthorized();
-}
-
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === "/") {
       return Response.json({
-        name: "thinking-mcp",
-        version: "1.0.0",
+        name: "Thinking MCP",
+        version: "1.1.0",
         status: "ok",
+        description: "Reasoning tools for MCP clients and ChatGPT custom MCP apps.",
         mcp_endpoint: "/mcp",
+        authentication: "none",
         model: MODEL,
         tools: ["deep_think", "critique", "plan", "verify"],
       });
@@ -320,18 +287,13 @@ export default {
       return new Response("Not Found", { status: 404 });
     }
 
-    const authError = checkAuth(request, env);
-    if (authError) return authError;
-
-    const handler = createMcpHandler(
+    return createMcpHandler(
       () => createServer(env),
       {
         route: "/mcp",
         legacy: "stateless",
         responseMode: "auto",
       }
-    );
-
-    return handler(request, env, ctx);
+    )(request, env, ctx);
   },
 };
