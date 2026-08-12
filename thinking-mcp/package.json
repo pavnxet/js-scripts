@@ -1,6 +1,6 @@
 {
   "name": "thinking-mcp",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "private": true,
   "description": "A Cloudflare Workers remote MCP server that provides reasoning tools backed by Workers AI.",
   "type": "module",
@@ -12,7 +12,7 @@
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0-beta.5",
     "agents": "0.20.0",
-    "zod": "^3.25.0"
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "wrangler": "^4.28.0"
