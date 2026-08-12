@@ -1,37 +1,53 @@
 # Thinking MCP
 
-A remote MCP server for AI clients that do not have a native thinking/reasoning mode.
+A public, stateless Cloudflare Workers remote MCP server that gives compatible AI clients a dedicated reasoning sub-agent backed by Cloudflare Workers AI.
 
-It exposes four tools:
+## Tools
 
-- `deep_think` — deep reasoning pass with concise reasoning summary
-- `critique` — challenge an existing answer/plan/argument
-- `plan` — produce an execution plan
-- `verify` — final correctness/self-check
+- `deep_think` — deep reasoning pass with a concise reasoning summary
+- `critique` — challenge an answer, plan, argument, or code
+- `plan` — turn a complex goal into an ordered execution plan
+- `verify` — perform a final correctness/self-check
 
-The server uses Cloudflare Workers AI and Kimi K2.7 Code with thinking enabled.
+The server uses `@cf/moonshotai/kimi-k2.7-code` through Workers AI with thinking enabled. Private chain-of-thought is not returned; the server returns a useful reasoning summary instead.
 
-## 1. Install
+## ChatGPT custom MCP app
+
+The `/mcp` endpoint is intentionally **unauthenticated** so ChatGPT can connect to it as a remote MCP app without copying a bearer token. OpenAI documents remote MCP apps in ChatGPT Developer Mode.
+
+1. Deploy this Worker to a public `workers.dev` URL.
+2. In ChatGPT, open **Settings → Apps → Advanced Settings** and enable **Developer mode** if your plan/workspace supports it.
+3. Choose **Create** / **Create app**.
+4. Enter the MCP endpoint:
+
+   `https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev/mcp`
+
+5. Leave authentication unset because this server is public.
+6. Run **Scan Tools**.
+7. Create the app and enable it in a new chat.
+8. Ask ChatGPT to use `deep_think`, `critique`, `plan`, or `verify`.
+
+OpenAI currently documents full MCP app support and developer mode for Business and Enterprise/Edu workspaces; Pro users can connect custom MCPs with read/fetch permissions. Availability depends on your account/workspace rollout.
+
+## Deploy
 
 ```bash
 npm install
+npx wrangler login
+npm run deploy
 ```
 
-## 2. Configure the authentication token
+After deployment, test:
 
-For local development, copy `.dev.vars.example` to `.dev.vars` and replace the token.
-
-For production:
-
-```bash
-npx wrangler secret put MCP_AUTH_TOKEN
+```text
+https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev/
+https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev/mcp
 ```
 
-Enter a long random token when prompted.
-
-## 3. Run locally
+## Local development
 
 ```bash
+npm install
 npm run dev
 ```
 
@@ -41,54 +57,25 @@ MCP endpoint:
 http://localhost:8787/mcp
 ```
 
-## 4. Test with MCP Inspector
+## Important security note
 
-```bash
-npx @modelcontextprotocol/inspector@latest
-```
+This ChatGPT-friendly build is public by design. Anyone who knows the endpoint can call the reasoning tools, and those calls can consume your Workers AI resources. Do not put secrets, private data, or privileged tools behind this server. For a private deployment, add OAuth/authorization instead of exposing it publicly.
 
-Connect the inspector to:
+## Architecture
 
 ```text
-http://localhost:8787/mcp
+ChatGPT / Claude / Cursor / MCP client
+              │
+              │ Streamable HTTP
+              ▼
+       Thinking MCP Worker
+              │
+              ▼
+       Workers AI / Kimi
+              │
+              ▼
+      Reasoning summary
+              │
+              ▼
+          AI client
 ```
-
-Use the Bearer token configured in `.dev.vars`.
-
-## 5. Deploy
-
-```bash
-npm run deploy
-```
-
-Your endpoint will be:
-
-```text
-https://thinking-mcp.<YOUR_SUBDOMAIN>.workers.dev/mcp
-```
-
-Use the same Bearer token as the MCP authorization credential.
-
-## How the thinking works
-
-The MCP protocol itself does not add hidden reasoning to the client model. Instead, the client gets access to a `deep_think` tool.
-
-When the client calls it:
-
-```text
-Your AI
-  -> deep_think
-  -> Thinking MCP
-  -> Kimi K2.7 Code with thinking enabled
-  -> concise reasoning summary
-  -> Your AI
-  -> final answer
-```
-
-The server intentionally does not return private chain-of-thought. It returns a useful reasoning summary, assumptions, alternatives, verification, and conclusion.
-
-## Security
-
-Do not deploy this without authentication. Every `deep_think` call consumes Workers AI resources.
-
-For production SaaS-style deployments, replace the simple Bearer token with OAuth or Cloudflare Access.
