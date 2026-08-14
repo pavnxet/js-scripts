@@ -1,28 +1,52 @@
 # A5 QR Print Station
 
-A lightweight, browser-based QR/image layout tool for preparing an A5 print sheet.
+A polished, browser-based QR/image layout studio for preparing A5 print sheets.
 
-## Features
+## What’s new in the current version
 
-- Generate QR codes from URLs or text.
-- Place QR codes into an A5 sheet grid.
-- Upload multiple images at once.
-- Drag and drop to rearrange slots.
-- Grid presets: 2×2, 3×3, 4×4, 5×5, 6×6, or a custom grid up to 10×10.
-- Adjust slot gap and sheet padding in millimetres.
-- Choose dashed, solid, or no slot borders.
-- Edit slot labels with the context menu.
-- Rotate and duplicate slots.
-- Undo up to 20 changes.
-- Save and load layouts as JSON files.
-- Export the A5 sheet as a PNG at a 300-dpi target width.
-- Print directly using an A5 portrait print layout.
-- Toggle dark mode.
-- Keyboard shortcuts for common actions.
+### ✨ New visual design
+- Modern glass-style interface with a cleaner workspace.
+- Smoother hover, press, drag, menu, toast, and sheet animations.
+- Responsive layout for smaller screens.
+- Dark/light theme with browser-local persistence.
+- Zoomable sheet preview.
+
+### 🧰 New productivity features
+- **QR color controls** for foreground and background.
+- Optional **QR slot labels** while generating a code.
+- **Contain / Cover** image-fit toggle per slot.
+- **Shuffle filled slots**.
+- Improved duplicate, rotate, clear, and context-menu actions.
+- **Redo** support in addition to undo.
+- Up to **30 undo/redo history states**.
+- Local browser **autosave** so the working layout can survive a reload.
+- Reset workspace action.
+- Animated feedback/toasts for important actions.
+
+### 📐 Layout & printing
+- A5 portrait sheet.
+- Grid presets: 2×2, 3×3, 4×4, 5×5, 6×6, or custom up to 10×10.
+- Adjustable slot gap and sheet padding in millimetres.
+- Dashed, solid, or hidden slot borders.
+- Drag/drop images directly onto a specific slot.
+- Drag/drop QR/image slots to rearrange them.
+- Batch image upload fills available empty slots automatically.
+- PNG export using a 300-DPI target scale.
+- Direct A5 print layout with print-only CSS.
+
+## Keyboard shortcuts
+
+- `Delete` — clear selected slot
+- `R` — rotate selected slot 90°
+- `D` — duplicate selected slot
+- `Ctrl + Z` — undo
+- `Ctrl + Y` — redo
+- `Esc` — deselect
+- Right-click — open slot actions
 
 ## Usage
 
-Open `index.html` directly in a modern browser. No build step or server is required.
+Open `index.html` directly in a modern browser. No build step or application server is required.
 
 For printing, use:
 
@@ -33,12 +57,14 @@ For printing, use:
 
 ## External libraries
 
-The app loads these libraries from CDN when needed:
+The app uses these browser-side CDN libraries:
 
-- [QRCode.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js) — QR generation.
-- [html2canvas](https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js) — PNG export.
+- QRCode.js — QR generation.
+- html2canvas — high-resolution PNG export.
 
-`html2canvas` is loaded dynamically only when the PNG export function is used.
+## Privacy
+
+The application is client-side. Uploaded images, generated QR codes, and layouts are processed in the browser. Layout autosave uses the browser's local storage; there is no application backend in this folder.
 
 ## Repository structure
 
@@ -47,7 +73,3 @@ qr-print-station/
 ├── index.html
 └── README.md
 ```
-
-## Notes
-
-The application is client-side only. Uploaded images and saved layouts are handled in the browser; there is no application backend in this folder.
