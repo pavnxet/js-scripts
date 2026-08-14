@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A5 QR Print Station</title>
+<style>
+  :root {
+    --a5-w: 148mm;
+    --a5-h: 210mm;
+    --grid-gap: 2mm;
+    --sheet-pad: 2mm;
+    --slot-border: 0.2mm dashed #ccc;
+    --sidebar-w: 300px;
+    --bg: #f5f5f5;
+    --surface: #fff;
+    --text: #333;
+    --muted: #666;
+    --border: #ddd;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+  }
+
+  [data-theme="dark"] {
+    --bg: #1a1a2e; --surface: #16213e; --text: #e0e0e0;
+    --muted: #aaa; --border: #333;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; min-height: 100vh;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: var(--sidebar-w); min-width: var(--sidebar-w);
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 20px; display: flex; flex-direction: column; gap: 14px;
+    overflow-y: auto; height: 100vh; position: sticky; top: 0; z-index: 10;
+  }
+  .sidebar h1 { font-size: 17px; line-height: 1.3; }
+  .sidebar p { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .sidebar hr { border: none; border-top: 1px solid var(--border); margin: 2px 0; }
+  .sidebar label { font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+  .sidebar select, .sidebar input[type="number"], .sidebar input[type="text"] {
+    padding: 8px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); color: var(--text); font-size: 13px; width: 100%;
+  }
+  .sidebar button {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface); color: var(--text); cursor: pointer;
+    font-size: 13px; width: 100%; text-align: center;
+  }
+  .sidebar button:hover { opacity: 0.85; }
+  .sidebar button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .sidebar button.primary:hover { background: var(--accent-hover); }
+  .sidebar button.danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+
+  .qr-gen-box {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .qr-gen-box h3 { font-size: 14px; margin-bottom: 2px; }
+  .qr-preview {
+    width: 100%; aspect-ratio: 1; background: #fff;
+    border: 1px solid var(--border); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .qr-preview img, .qr-preview canvas { max-width: 100%; max-height: 100%; }
+
+  .kbd-hints { font-size: 11px; color: var(--muted); line-height: 1.6; }
+  .kbd-hints kbd {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 3px; padding: 0 4px; font-family: monospace; font-size: 10px;
+  }
+
+  /* ─── MAIN CONTENT ─── */
+  .main {
+    flex: 1; padding: 20px; display: flex;
+    flex-direction: column; align-items: center; overflow-y: auto;
+  }
+
+  .tip {
+    max-width: 700px; width: 100%; margin-bottom: 12px; padding: 10px 16px;
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
+    font-size: 12px; color: #92400e; line-height: 1.5;
+  }
+  [data-theme="dark"] .tip { background: #2d2a1a; border-color: #5c4b1e; color: #fde68a; }
+
+  .status-bar { font-size: 13px; color: var(--muted); margin-bottom: 12px; text-align: center; }
+
+  /* ─── PRINT SHEET ─── */
+  .print-sheet {
+    width: var(--a5-w); height: var(--a5-h); background: #fff;
+    box-shadow: 0 0 12px rgba(0,0,0,0.12); position: relative; flex-shrink: 0;
+  }
+
+  .qr-grid {
+    width: 100%; height: 100%; display: grid;
+    gap: var(--grid-gap); padding: var(--sheet-pad);
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+  }
+
+  .qr-slot {
+    border: var(--slot-border); min-width: 0; min-height: 0; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; background: #fff; cursor: default;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .qr-slot.selected { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .qr-slot.drag-over { background: #dbeafe; border-color: var(--accent); border-style: solid; }
+  .qr-slot.file-drag-over { background: #d1fae5; border-color: #10b981; border-style: solid; }
+
+  .qr-slot img {
+    width: 100%; height: 100%; object-fit: contain; display: block;
+    max-width: none; image-rendering: pixelated; flex: 1; min-height: 0;
+  }
+  .qr-slot .slot-label {
+    font-size: 7pt; text-align: center; color: #333; padding: 1mm 0.5mm 0;
+    line-height: 1.2; word-break: break-word; max-height: 18%;
+    overflow: hidden; flex-shrink: 0; width: 100%;
+  }
+  .qr-slot.empty::after {
+    content: attr(data-index); color: #ddd; font-size: 11px; pointer-events: none;
+  }
+
+  /* ─── CONTEXT MENU ─── */
+  .ctx-menu {
+    display: none; position: fixed; z-index: 999; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 170px; padding: 4px 0; font-size: 13px;
+  }
+  .ctx-menu.open { display: block; }
+  .ctx-menu-item { padding: 8px 14px; cursor: pointer; white-space: nowrap; }
+  .ctx-menu-item:hover { background: var(--accent); color: #fff; }
+  .ctx-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ─── PRINT STYLES (A5 FIX) ─── */
+  @page { size: 148mm 210mm; margin: 0; }
+  @media print {
+    html, body {
+      width: var(--a5-w); height: var(--a5-h);
+      margin: 0 !important; padding: 0 !important;
+      background: #fff !important; overflow: hidden; display: block;
+    }
+    .no-print, .sidebar { display: none !important; }
+    .main { padding: 0 !important; align-items: flex-start; }
+    .print-sheet {
+      position: fixed; left: 0; top: 0;
+      width: var(--a5-w) !important; height: var(--a5-h) !important;
+      margin: 0 !important; padding: 0 !important;
+      box-shadow: none !important; transform: none !important;
+      zoom: 1 !important; page-break-after: avoid;
+    }
+    .qr-grid {
+      width: 100% !important; height: 100% !important;
+      gap: var(--grid-gap) !important; padding: var(--sheet-pad) !important;
+    }
+    .qr-slot { border: var(--slot-border) !important; }
+    .qr-slot.selected { outline: none !important; }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="sidebar no-print">
+  <h1>QR Print Station</h1>
+  <p>A5 layout • drag/drop files or QR codes into slots • rearrange freely • print.</p>
+
+  <hr>
+
+  <!-- QR GENERATOR -->
+  <div class="qr-gen-box">
+    <h3>＋ Generate QR Code</h3>
+    <input type="text" id="qrTextInput" placeholder="URL, text, WiFi…" oninput="previewQr()">
+    <div class="qr-preview" id="qrPreview"></div>
+    <label style="font-size:12px;">Target slot:
+      <select id="qrTargetSlot"></select>
+    </label>
+    <button class="primary" onclick="confirmQrGenerate()">Add to Sheet</button>
+  </div>
+
+  <hr>
+
+  <!-- GRID SETTINGS -->
+  <label>Grid preset:
+    <select id="gridPreset" onchange="toggleCustomInput()">
+      <option value="2">2×2</option><option value="3">3×3</option>
+      <option value="4" selected>4×4</option><option value="5">5×5</option>
+      <option value="6">6×6</option><option value="custom">Custom…</option>
+    </select>
+  </label>
+  <div id="customGridInputs" class="row" style="display:none;">
+    <input type="number" id="customCols" min="1" max="10" value="4" placeholder="Cols">
+    <input type="number" id="customRows" min="1" max="10" value="4" placeholder="Rows">
+  </div>
+  <button onclick="applyPreset()">Apply Grid</button>
+
+  <div class="row">
+    <label>Gap (mm)<input type="number" id="gapInput" min="0" max="10" step="0.5" value="2" onchange="updateSpacing()"></label>
+    <label>Pad (mm)<input type="number" id="padInput" min="0" max="10" step="0.5" value="2" onchange="updateSpacing()"></label>
+  </div>
+
+  <label>Border style:
+    <select id="borderStyle" onchange="updateBorderStyle()">
+      <option value="0.2mm dashed #ccc">Dashed</option>
+      <option value="0.2mm solid #ccc">Solid</option>
+      <option value="none">None</option>
+    </select>
+  </label>
+
+  <hr>
+
+  <!-- FILE & ACTIONS -->
+  <label class="primary" style="cursor:pointer;text-align:center;padding:9px;border-radius:6px;background:var(--accent);color:#fff;border:1px solid var(--accent);">
+    📁 Batch Upload Images
+    <input type="file" id="batchUpload" multiple accept="image/*" style="display:none;" onchange="handleBatchUpload(this)">
+  </label>
+
+  <button onclick="clearAll()" class="danger">🗑 Clear All Slots</button>
+  <button onclick="undoLast()">↩ Undo Last Change</button>
+
+  <hr>
+
+  <button onclick="saveLayout()">💾 Save Layout to File</button>
+  <button onclick="loadLayout()">📂 Load Saved Layout</button>
+  <button class="primary" onclick="downloadPNG()">⬇ Download PNG (300dpi)</button>
+  <button class="primary" onclick="window.print()">🖨 Print This Layout</button>
+  <button onclick="toggleTheme()">🌓 Toggle Dark Mode</button>
+
+  <hr>
+
+  <div class="kbd-hints">
+    <strong>Keyboard shortcuts:</strong><br>
+    <kbd>Del</kbd> Clear selected &nbsp; <kbd>R</kbd> Rotate<br>
+    <kbd>D</kbd> Duplicate &nbsp; <kbd>Ctrl+Z</kbd> Undo<br>
+    <kbd>Esc</kbd> Deselect &nbsp; Right-click for menu
+  </div>
+</aside>
+
+<!-- ═══════════ MAIN AREA ═══════════ -->
+<main class="main">
+  <div class="tip no-print">
+    <strong>Printing tip:</strong> Choose <em>A5 Portrait</em> → Paper size: A5 →
+    Scale: Actual size / 100% → Background graphics: ON.
+  </div>
+
+  <div class="status-bar" id="statusText">Grid 4 × 4 · Filled 0 / 16</div>
+
+  <div class="print-sheet" id="printSheet">
+    <div class="qr-grid" id="qrGrid"></div>
+  </div>
+</main>
+
+<!-- CONTEXT MENU -->
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-menu-item" onclick="ctxAction('label')">✏️ Edit Label</div>
+  <div class="ctx-menu-item" onclick="ctxAction('rotate')">🔄 Rotate 90°</div>
+  <div class="ctx-menu-item" onclick="ctxAction('duplicate')">📋 Duplicate to Empty Slot</div>
+  <div class="ctx-menu-sep"></div>
+  <div class="ctx-menu-item" onclick="ctxAction('clear')">🗑 Clear Slot</div>
+</div>
+
+<!-- HIDDEN LOADER -->
+<input type="file" id="layoutLoader" accept=".json" style="display:none;" onchange="handleLoadLayout(this)">
+
+<!-- LIBS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// ─── STATE ────────────────────────────────────────────────
+let gridCols = 4, gridRows = 4;
+const slots = [];
+const undoStack = [];
+const MAX_UNDO = 20;
+let selectedSlotIndex = null;
+let ctxSlotIndex = null;
+let generatedQrDataUrl = null;
+let dragSrcIndex = null;
+
+function emptySlot() { return { img: null, label: '', rotation: 0 }; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ─── INIT ─────────────────────────────────────────────────
+function init() {
+  buildGrid();
+  populateQrTargetSelect();
+  document.addEventListener('click', closeCtxMenu);
+  document.addEventListener('keydown', onKeyDown);
+  // Prevent browser from opening dropped files
+  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('drop', e => e.preventDefault());
+}
+
+function pushUndo() {
+  undoStack.push(JSON.parse(JSON.stringify(slots)));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+}
+
+function undoLast() {
+  if (!undoStack.length) return;
+  const prev = undoStack.pop();
+  slots.length = 0;
+  prev.forEach(s => slots.push(s));
+  selectedSlotIndex = null;
+  buildGrid();
+}
+
+// ─── BUILD GRID ───────────────────────────────────────────
+function buildGrid() {
+  const grid = document.getElementById('qrGrid');
+  grid.style.gridTemplateColumns = `repeat(${gridCols}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${gridRows}, 1fr)`;
+  grid.innerHTML = '';
+
+  const total = gridCols * gridRows;
+  while (slots.length < total) slots.push(emptySlot());
+  slots.length = total;
+
+  for (let i = 0; i < total; i++) {
+    const s = slots[i];
+    const el = document.createElement('div');
+    el.className = 'qr-slot'
+      + (!s.img && !s.label ? ' empty' : '')
+      + (i === selectedSlotIndex ? ' selected' : '');
+    el.dataset.index = i;
+    el.draggable = true;
+
+    if (s.img) {
+      const img = document.createElement('img');
+      img.src = s.img;
+      img.draggable = false;           // FIX: prevent native image drag
+      img.style.pointerEvents = 'none'; // FIX: clicks pass to slot
+      img.style.transform = `rotate(${s.rotation || 0}deg)`;
+      el.appendChild(img);
+    }
+    if (s.label) {
+      const lbl = document.createElement('div');
+      lbl.className = 'slot-label';
+      lbl.textContent = s.label;
+      lbl.style.pointerEvents = 'none';
+      el.appendChild(lbl);
+    }
+    if (!s.img && !s.label) el.dataset.index = i + 1;
+
+    el.addEventListener('click', () => selectSlot(i));
+    el.addEventListener('contextmenu', e => openCtxMenu(e, i));
+    el.addEventListener('dragstart', onDragStart);
+    el.addEventListener('dragend', onDragEnd);
+    el.addEventListener('dragover', onSlotDragOver);
+    el.addEventListener('dragleave', onSlotDragLeave);
+    el.addEventListener('drop', onSlotDrop);
+
+    grid.appendChild(el);
+  }
+  updateStatus();
+  populateQrTargetSelect();
+}
+
+function updateStatus() {
+  const total = gridCols * gridRows;
+  const filled = slots.filter(s => s.img || s.label).length;
+  document.getElementById('statusText').textContent =
+    `Grid ${gridCols} × ${gridRows} · Filled ${filled} / ${total}`;
+}
+
+// ─── SELECTION ────────────────────────────────────────────
+function selectSlot(i) {
+  selectedSlotIndex = selectedSlotIndex === i ? null : i;
+  document.querySelectorAll('.qr-slot').forEach((el, idx) => {
+    el.classList.toggle('selected', idx === selectedSlotIndex);
+  });
+}
+
+// ─── KEYBOARD SHORTCUTS ──────────────────────────────────
+function onKeyDown(e) {
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if (e.key === 'Escape') { selectedSlotIndex = null; buildGrid(); }
+  if (e.key === 'Delete' && selectedSlotIndex !== null) clearSelectedSlot();
+  if ((e.key === 'r' || e.key === 'R') && selectedSlotIndex !== null) rotateSlot(selectedSlotIndex);
+  if ((e.key === 'd' || e.key === 'D') && selectedSlotIndex !== null) duplicateSlot(selectedSlotIndex);
+  if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undoLast(); }
+}
+
+// ─── SLOT ACTIONS ─────────────────────────────────────────
+function clearSelectedSlot() {
+  if (selectedSlotIndex === null) return;
+  pushUndo();
+  slots[selectedSlotIndex] = emptySlot();
+  selectedSlotIndex = null;
+  buildGrid();
+}
+
+function rotateSlot(i) {
+  pushUndo();
+  slots[i].rotation = ((slots[i].rotation || 0) + 90) % 360;
+  buildGrid();
+}
+
+function duplicateSlot(i) {
+  const src = slots[i];
+  if (!src.img && !src.label) return;
+  const target = slots.findIndex((s, idx) => idx !== i && !s.img && !s.label);
+  if (target === -1) { alert('No empty slot available.'); return; }
+  pushUndo();
+  slots[target] = JSON.parse(JSON.stringify(src));
+  buildGrid();
+}
+
+function editLabel(i) {
+  const label = prompt('Enter label for this slot:', slots[i].label || '');
+  if (label === null) return;
+  pushUndo();
+  slots[i].label = label;
+  buildGrid();
+}
+
+// ─── CONTEXT MENU ─────────────────────────────────────────
+function openCtxMenu(e, i) {
+  e.preventDefault();
+  ctxSlotIndex = i;
+  selectSlot(i);
+  const menu = document.getElementById('ctxMenu');
+  menu.classList.add('open');
+  menu.style.left = Math.min(e.clientX, window.innerWidth - 190) + 'px';
+  menu.style.top = Math.min(e.clientY, window.innerHeight - 200) + 'px';
+  e.stopPropagation();
+}
+
+function closeCtxMenu() {
+  document.getElementById('ctxMenu').classList.remove('open');
+}
+
+function ctxAction(action) {
+  closeCtxMenu();
+  if (ctxSlotIndex === null) return;
+  switch (action) {
+    case 'label': editLabel(ctxSlotIndex); break;
+    case 'rotate': rotateSlot(ctxSlotIndex); break;
+    case 'duplicate': duplicateSlot(ctxSlotIndex); break;
+    case 'clear':
+      pushUndo();
+      slots[ctxSlotIndex] = emptySlot();
+      selectedSlotIndex = null;
+      buildGrid();
+      break;
+  }
+}
+
+// ─── DRAG & DROP (FIXED) ─────────────────────────────────
+function onDragStart(e) {
+  dragSrcIndex = parseInt(e.currentTarget.dataset.index);
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(dragSrcIndex));
+  e.currentTarget.style.opacity = '0.4';
+}
+
+function onDragEnd(e) {
+  e.currentTarget.style.opacity = '1';
+  dragSrcIndex = null;
+  document.querySelectorAll('.drag-over, .file-drag-over').forEach(el => {
+    el.classList.remove('drag-over', 'file-drag-over');
+  });
+}
+
+function onSlotDragOver(e) {
+  e.preventDefault();
+  const idx = parseInt(e.currentTarget.dataset.index);
+  if (dragSrcIndex !== null && dragSrcIndex !== idx) {
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over');
+    e.currentTarget.classList.remove('file-drag-over');
+  } else {
+    e.dataTransfer.dropEffect = 'copy';
+    e.currentTarget.classList.add('file-drag-over');
+    e.currentTarget.classList.remove('drag-over');
+  }
+}
+
+function onSlotDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over', 'file-drag-over');
+}
+
+function onSlotDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.remove('drag-over', 'file-drag-over');
+  const targetIdx = parseInt(e.currentTarget.dataset.index);
+
+  // Internal rearrange
+  if (dragSrcIndex !== null && dragSrcIndex !== targetIdx) {
+    pushUndo();
+    [slots[dragSrcIndex], slots[targetIdx]] = [slots[targetIdx], slots[dragSrcIndex]];
+    buildGrid();
+    return;
+  }
+
+  // External file drop
+  const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+  if (files.length > 0) {
+    pushUndo();
+    const reader = new FileReader();
+    reader.onload = ev => {
+      slots[targetIdx].img = ev.target.result;
+      buildGrid();
+    };
+    reader.readAsDataURL(files[0]);
+  }
+}
+
+// ─── GRID PRESET ──────────────────────────────────────────
+function toggleCustomInput() {
+  const v = document.getElementById('gridPreset').value;
+  document.getElementById('customGridInputs').style.display = v === 'custom' ? 'flex' : 'none';
+}
+
+function applyPreset() {
+  const v = document.getElementById('gridPreset').value;
+  pushUndo();
+  if (v === 'custom') {
+    gridCols = clamp(parseInt(document.getElementById('customCols').value) || 4, 1, 10);
+    gridRows = clamp(parseInt(document.getElementById('customRows').value) || 4, 1, 10);
+  } else {
+    gridCols = parseInt(v); gridRows = parseInt(v);
+  }
+  const old = [...slots];
+  slots.length = 0;
+  const total = gridCols * gridRows;
+  for (let i = 0; i < total; i++) slots[i] = old[i] || emptySlot();
+  selectedSlotIndex = null;
+  buildGrid();
+}
+
+// ─── SPACING & BORDER ────────────────────────────────────
+function updateSpacing() {
+  document.documentElement.style.setProperty('--grid-gap',
+    (parseFloat(document.getElementById('gapInput').value) || 0) + 'mm');
+  document.documentElement.style.setProperty('--sheet-pad',
+    (parseFloat(document.getElementById('padInput').value) || 0) + 'mm');
+}
+
+function updateBorderStyle() {
+  document.documentElement.style.setProperty('--slot-border',
+    document.getElementById('borderStyle').value);
+}
+
+// ─── BATCH UPLOAD ─────────────────────────────────────────
+function handleBatchUpload(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  pushUndo();
+  let idx = slots.findIndex(s => !s.img);
+  let loaded = 0;
+  files.forEach(file => {
+    if (idx >= slots.length) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      slots[idx].img = e.target.result;
+      idx++; loaded++;
+      if (loaded === files.length || idx >= slots.length) buildGrid();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function clearAll() {
+  if (!confirm('Clear all slots?')) return;
+  pushUndo();
+  slots.fill(emptySlot());
+  selectedSlotIndex = null;
+  buildGrid();
+}
+
+// ─── QR GENERATOR ─────────────────────────────────────────
+function populateQrTargetSelect() {
+  const sel = document.getElementById('qrTargetSlot');
+  const cur = sel.value;
+  sel.innerHTML = '';
+  const total = gridCols * gridRows;
+  const empties = [];
+  for (let i = 0; i < total; i++) { if (!slots[i].img) empties.push(i); }
+  const list = empties.length ? empties : Array.from({ length: total }, (_, i) => i);
+  list.forEach(i => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `Slot ${i + 1}` + (slots[i].img ? ' (overwrite)' : '');
+    sel.appendChild(opt);
+  });
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+function previewQr() {
+  const text = document.getElementById('qrTextInput').value.trim();
+  const container = document.getElementById('qrPreview');
+  container.innerHTML = '';
+  generatedQrDataUrl = null;
+  if (!text) return;
+  try {
+    new QRCode(container, {
+      text, width: 200, height: 200,
+      correctLevel: QRCode.CorrectLevel.M,
+      colorDark: '#000000', colorLight: '#ffffff'
+    });
+    setTimeout(() => {
+      const canvas = container.querySelector('canvas');
+      const img = container.querySelector('img');
+      if (canvas) generatedQrDataUrl = canvas.toDataURL('image/png');
+      else if (img) generatedQrDataUrl = img.src;
+    }, 150);
+  } catch (err) {
+    container.innerHTML = '<span style="color:red;font-size:11px;">Error</span>';
+  }
+}
+
+function confirmQrGenerate() {
+  if (!generatedQrDataUrl) { alert('Enter text first.'); return; }
+  const targetIdx = parseInt(document.getElementById('qrTargetSlot').value);
+  pushUndo();
+  slots[targetIdx].img = generatedQrDataUrl;
+  document.getElementById('qrTextInput').value = '';
+  document.getElementById('qrPreview').innerHTML = '';
+  generatedQrDataUrl = null;
+  buildGrid();
+}
+
+// ─── SAVE / LOAD ──────────────────────────────────────────
+function saveLayout() {
+  const data = {
+    cols: gridCols, rows: gridRows, slots,
+    gap: document.getElementById('gapInput').value,
+    pad: document.getElementById('padInput').value,
+    border: document.getElementById('borderStyle').value
+  };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'qr-layout-a5.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function loadLayout() { document.getElementById('layoutLoader').click(); }
+
+function handleLoadLayout(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      pushUndo();
+      gridCols = d.cols || 4; gridRows = d.rows || 4;
+      slots.length = 0;
+      const total = gridCols * gridRows;
+      for (let i = 0; i < total; i++) {
+        const raw = d.slots?.[i];
+        slots[i] = raw
+          ? { img: raw.img || null, label: raw.label || '', rotation: raw.rotation || 0 }
+          : emptySlot();
+      }
+      if (d.gap != null) document.getElementById('gapInput').value = d.gap;
+      if (d.pad != null) document.getElementById('padInput').value = d.pad;
+      if (d.border) document.getElementById('borderStyle').value = d.border;
+      updateSpacing(); updateBorderStyle();
+
+      const sel = document.getElementById('gridPreset');
+      const match = [...sel.options].find(o => o.value === String(gridCols) && o.value !== 'custom');
+      if (match && gridCols === gridRows) { sel.value = String(gridCols); toggleCustomInput(); }
+      else {
+        sel.value = 'custom'; toggleCustomInput();
+        document.getElementById('customCols').value = gridCols;
+        document.getElementById('customRows').value = gridRows;
+      }
+      selectedSlotIndex = null;
+      buildGrid();
+    } catch (err) { alert('Invalid layout file'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// ─── DOWNLOAD PNG AT 300DPI ──────────────────────────────
+async function downloadPNG() {
+  const sheet = document.getElementById('printSheet');
+  const rect = sheet.getBoundingClientRect();
+  const TARGET_W = 1748; // A5 @ 300dpi
+  const scale = TARGET_W / rect.width;
+
+  if (typeof html2canvas === 'undefined') {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload = res; s.onerror = rej; document.head.appendChild(s);
+    });
+  }
+
+  try {
+    const canvas = await html2canvas(sheet, {
+      scale, backgroundColor: '#ffffff', useCORS: true,
+      logging: false, width: rect.width, height: rect.height
+    });
+    const a = document.createElement('a');
+    a.download = 'qr-labels-a5-300dpi.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  } catch (err) { alert('PNG export failed: ' + err.message); }
+}
+
+// ─── DARK MODE ────────────────────────────────────────────
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+}
+
+// ─── START ────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
