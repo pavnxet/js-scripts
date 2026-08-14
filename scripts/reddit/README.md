@@ -1,17 +1,42 @@
 # Reddit Thread Extractor — Auto Expand Replies
 
-Version **3.0.0**.
+Version **3.1.0**.
 
-This is a browser-side Tampermonkey userscript for extracting a Reddit post and its **loaded comments and nested replies**. Before exporting, it automatically looks for visible Reddit controls such as **View more replies**, **Load more comments**, **Continue this thread**, and similar controls, clicks them in batches, waits for new content, rescans, and repeats until the page becomes stable or the safety round limit is reached.
+This is a browser-side Tampermonkey userscript for extracting a Reddit post together with its **loaded comments and nested replies**. Before exporting, it automatically looks for visible Reddit controls such as **View more replies**, **Load more comments**, **Continue this thread**, and similar controls, clicks them in batches, waits for new content, rescans, and repeats until the page becomes stable or the safety round limit is reached.
 
-## What changed in v3
+## What changed in v3.1
 
-The main difference from v2 is the workflow:
+Version 3.1 adds a complete **post metadata object** to the export. The extractor now saves information about the post itself before saving its comments.
+
+### Post metadata
+
+When Reddit exposes the information in the rendered page, the export includes:
+
+- post ID
+- title
+- author
+- subreddit
+- canonical URL / permalink
+- post body
+- score
+- upvote ratio
+- Reddit's reported comment count
+- creation timestamp
+- flair
+- NSFW flag
+- spoiler flag
+- links contained in the post
+
+Fields that Reddit does not expose to the page are stored as `null` rather than guessed.
+
+## Complete workflow
 
 ```text
 Open Reddit post
       ↓
 Click “Expand replies + extract”
+      ↓
+Read post metadata
       ↓
 Detect visible reply/load-more controls
       ↓
@@ -23,7 +48,7 @@ Rescan the DOM
       ↓
 Repeat until stable
       ↓
-Final extraction
+Final extraction of post + comments
       ↓
 JSON / CSV / Copy
 ```
@@ -50,9 +75,7 @@ The script matches:
 
 ## How automatic reply expansion works
 
-The script does not assume that one particular Reddit HTML structure will always exist.
-
-It searches the rendered page, including **open Shadow DOM roots**, for clickable elements whose visible text or accessibility label looks like a reply/comment expansion control.
+The script searches the rendered page, including **open Shadow DOM roots**, for clickable elements whose visible text or accessibility label looks like a reply/comment expansion control.
 
 Examples it recognizes include patterns similar to:
 
@@ -89,7 +112,7 @@ At the end it changes to:
 Complete · 512 comments found
 ```
 
-The progress percentage represents the extractor's **expansion rounds**, not a claim that Reddit has exposed a mathematically exact percentage of all comments. Reddit's reported comment count is shown separately when the page exposes it.
+The percentage represents the extractor's **expansion rounds**, not a claim that Reddit has exposed a mathematically exact percentage of all comments. Reddit's reported comment count is shown separately when the page exposes it.
 
 ## What counts as a complete extraction?
 
@@ -98,6 +121,34 @@ The extractor considers the page stable when it has repeatedly found no new expa
 There is a safety limit of **80 expansion rounds**. This prevents a broken Reddit control, endlessly changing page, or unusual thread from causing an infinite loop.
 
 If Reddit still has inaccessible/collapsed content after that point, the export contains everything the browser made available to the script.
+
+## Post data
+
+The JSON export has a top-level `post` object. A simplified example is:
+
+```json
+{
+  "post": {
+    "id": "abc123",
+    "title": "Example Reddit post",
+    "author": "example_user",
+    "subreddit": "r/AskReddit",
+    "url": "https://www.reddit.com/r/AskReddit/comments/abc123/example/",
+    "permalink": "https://www.reddit.com/r/AskReddit/comments/abc123/example/",
+    "body": "The post body, when available",
+    "score": 1234,
+    "upvote_ratio": 0.95,
+    "comment_count_reported": 567,
+    "created_at": "2026-08-14T10:30:00Z",
+    "flair": "Discussion",
+    "is_nsfw": false,
+    "is_spoiler": false,
+    "links": []
+  }
+}
+```
+
+The extractor does **not** invent missing metadata. If Reddit's current rendered page does not expose a field, that field is `null` or an empty array as appropriate.
 
 ## Nested replies
 
@@ -136,11 +187,16 @@ The extractor does not flatten the relationship into a single text block.
 - title
 - author
 - subreddit
+- canonical URL / permalink
+- body
 - score, when exposed
 - upvote ratio, when exposed
 - creation timestamp, when exposed
 - Reddit's reported comment count, when exposed
-- canonical URL
+- flair, when exposed
+- NSFW status
+- spoiler status
+- links
 
 ### Comment / reply
 
@@ -161,15 +217,52 @@ Duplicate comment IDs are removed.
 
 ### JSON
 
-Recommended format. It preserves the complete post object, comment array, parent relationships and extraction statistics.
+Recommended format. It preserves the complete `post` object, `comments` array, parent relationships and extraction statistics.
 
 ### CSV
 
-One row per extracted comment. Useful for Excel, Google Sheets, Python, pandas, or other analysis tools.
+One row per extracted comment. The CSV includes the important post metadata on every comment row so it remains useful when imported into Excel, Google Sheets, Python, pandas, or another analysis tool.
+
+CSV post columns include:
+
+```text
+post_id
+post_title
+post_author
+subreddit
+post_url
+post_created_at
+post_score
+post_upvote_ratio
+post_flair
+```
+
+Comment columns then include the comment/reply information.
 
 ### Copy JSON
 
 Copies the complete JSON result to the clipboard.
+
+## Output schema
+
+The current export uses `schema_version: "3.1"` and contains:
+
+```text
+schema_version
+tool_version
+source
+post
+comments[]
+stats
+```
+
+The important relationship fields are:
+
+```text
+comments[].id
+comments[].parent_id
+comments[].depth
+```
 
 ## Important limitation
 
@@ -236,25 +329,15 @@ Those replies may be:
 
 Wait until Reddit has rendered the thread and run the extraction again.
 
-## Output schema
-
-The current export uses `schema_version: "3.0"` and contains:
-
-```text
-post
-comments[]
-stats
-```
-
-The important relationship fields are:
-
-```text
-comments[].id
-comments[].parent_id
-comments[].depth
-```
-
 ## Version history
+
+### 3.1.0
+
+- added complete post metadata extraction
+- added post body, flair, permalink, NSFW/spoiler status and post links when exposed
+- JSON schema updated to `3.1`
+- CSV now carries key post metadata on every comment row
+- retained automatic reply expansion and live progress reporting
 
 ### 3.0.0
 
