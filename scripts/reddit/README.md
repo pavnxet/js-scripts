@@ -1,196 +1,272 @@
-# Reddit Thread Extractor
+# Reddit Thread Extractor — Auto Expand Replies
 
-A browser-side Reddit thread exporter for content that is already loaded in the current Reddit page.
+Version **3.0.0**.
 
-## What changed in v2
+This is a browser-side Tampermonkey userscript for extracting a Reddit post and its **loaded comments and nested replies**. Before exporting, it automatically looks for visible Reddit controls such as **View more replies**, **Load more comments**, **Continue this thread**, and similar controls, clicks them in batches, waits for new content, rescans, and repeats until the page becomes stable or the safety round limit is reached.
 
-The original script tried to drive Reddit's internal comment-loading controls and depended heavily on private DOM details such as `faceplate-partial`, `more-comments`, and a specific set of `shreddit-*` elements. Those details can change without notice, and the script could stop at partial results or fail completely.
+## What changed in v3
 
-Version 2 uses a safer and more stable model:
+The main difference from v2 is the workflow:
 
-1. Open a Reddit **post/thread** in your browser.
-2. Install the script in Tampermonkey (or another userscript manager).
-3. The extractor adds a small **Reddit Extractor** panel to the page.
-4. Reddit loads the post/comments normally. You can expand or load additional comments yourself.
-5. Click **Scan loaded content**.
-6. The script reads the content currently present in the page and builds a normalized dataset.
-7. Export as **JSON** or **CSV**, or copy the JSON to the clipboard.
+```text
+Open Reddit post
+      ↓
+Click “Expand replies + extract”
+      ↓
+Detect visible reply/load-more controls
+      ↓
+Click a small batch of controls
+      ↓
+Wait for Reddit to render new replies
+      ↓
+Rescan the DOM
+      ↓
+Repeat until stable
+      ↓
+Final extraction
+      ↓
+JSON / CSV / Copy
+```
 
-It does **not** attempt to bypass Reddit authentication, CAPTCHAs, API restrictions, deleted content, rate limits, or safety controls.
-
-## Files
-
-- `ultimate-reddit-extractor.js` — the complete userscript.
-- `README.md` — installation, operation, output format, troubleshooting and limitations.
+A **live progress bar** is shown throughout the process. It reports the current phase, number of controls clicked, and number of comments currently detected.
 
 ## Installation
 
-### Recommended: Tampermonkey
+### Tampermonkey
 
-1. Install Tampermonkey for your browser.
+1. Install Tampermonkey.
 2. Create a new userscript.
-3. Replace the template with the contents of `ultimate-reddit-extractor.js`.
-4. Save it.
-5. Open a Reddit post, for example a URL containing `/comments/<post-id>/`.
-6. The **Reddit Extractor** panel appears in the lower-right corner.
+3. Copy `ultimate-reddit-extractor.js` into it.
+4. Save and enable the script.
+5. Open a specific Reddit post/thread containing `/comments/<post-id>/`.
+6. A **Reddit Extractor** panel appears in the lower-right corner.
+7. Click **Expand replies + extract**.
 
-The script has `@match` rules for:
+The script matches:
 
 - `https://www.reddit.com/*`
 - `https://old.reddit.com/*`
 - `https://new.reddit.com/*`
 
-### Running from DevTools
+## How automatic reply expansion works
 
-The script can also be pasted into the browser console while viewing a Reddit post. In some browsers, DevTools prevents pasting by default; follow the browser's own safety prompt rather than disabling security features.
+The script does not assume that one particular Reddit HTML structure will always exist.
 
-For repeated use, Tampermonkey is preferable because the script loads automatically.
+It searches the rendered page, including **open Shadow DOM roots**, for clickable elements whose visible text or accessibility label looks like a reply/comment expansion control.
 
-## How it works
+Examples it recognizes include patterns similar to:
 
-### 1. Detects the current thread
+- `View more replies`
+- `View 5 more replies`
+- `Load more replies`
+- `Show more comments`
+- `Continue this thread`
+- `More replies`
 
-The script checks the current URL for a Reddit `/comments/<id>/` route and also checks Reddit's rendered post element for a post ID.
+When a control is found:
 
-It will refuse to export if you are on a subreddit listing instead of a specific thread.
+1. It is scrolled into view.
+2. The extractor clicks it.
+3. It waits for Reddit to render the response.
+4. The comment count is measured again.
+5. Newly exposed controls are discovered.
+6. The process repeats.
 
-### 2. Reads post metadata
+Only a small batch of controls is clicked per round. This prevents the script from firing hundreds of clicks at once and gives Reddit time to update the DOM.
 
-It collects the information available in the rendered post, including:
+## Progress bar
 
-- post ID
+The panel displays progress such as:
+
+```text
+[██████████████░░░░░░] 70%
+Expanding replies · 34 controls clicked · 428 comments loaded
+```
+
+At the end it changes to:
+
+```text
+Complete · 512 comments found
+```
+
+The progress percentage represents the extractor's **expansion rounds**, not a claim that Reddit has exposed a mathematically exact percentage of all comments. Reddit's reported comment count is shown separately when the page exposes it.
+
+## What counts as a complete extraction?
+
+The extractor considers the page stable when it has repeatedly found no new expandable controls and the number of detected comments stops increasing.
+
+There is a safety limit of **80 expansion rounds**. This prevents a broken Reddit control, endlessly changing page, or unusual thread from causing an infinite loop.
+
+If Reddit still has inaccessible/collapsed content after that point, the export contains everything the browser made available to the script.
+
+## Nested replies
+
+Yes. Nested replies are treated as individual comments.
+
+Each comment contains relationship information such as:
+
+```json
+{
+  "id": "reply123",
+  "parent_id": "comment456",
+  "depth": 2,
+  "content": "This is a nested reply"
+}
+```
+
+This means a downstream program can reconstruct the conversation tree using `parent_id` and `depth`.
+
+Example:
+
+```text
+Comment A
+├── Reply A1
+│   ├── Reply A1.1
+│   └── Reply A1.2
+└── Reply A2
+```
+
+The extractor does not flatten the relationship into a single text block.
+
+## What the extractor collects
+
+### Post
+
+- ID
 - title
 - author
 - subreddit
-- score, when exposed by the page
+- score, when exposed
 - upvote ratio, when exposed
 - creation timestamp, when exposed
-- reported comment count, when exposed
+- Reddit's reported comment count, when exposed
 - canonical URL
 
-### 3. Finds loaded comments
-
-It supports several Reddit DOM representations, including current `shreddit-comment` elements and common `data-testid` comment containers.
-
-The extractor also walks **open Shadow DOM roots** so that a component boundary does not automatically hide a comment from the scanner.
-
-### 4. Extracts comment data
-
-For each loaded comment it attempts to collect:
+### Comment / reply
 
 - comment ID
 - parent comment ID
 - author
-- score
-- depth
-- whether the author matches the post author
-- deleted state
-- text body
+- score, when exposed
+- depth, when exposed
+- OP indicator
+- deleted indicator
+- text content
 - timestamp
 - external links
 
-Duplicate comment IDs are removed from the final result.
+Duplicate comment IDs are removed.
 
-### 5. Exports the result
+## Export formats
 
-JSON is the primary format because it preserves the post, comments, metadata and nested relationship information.
+### JSON
 
-CSV is provided for spreadsheet-style analysis and contains one row per extracted comment.
+Recommended format. It preserves the complete post object, comment array, parent relationships and extraction statistics.
 
-## Important: what "loaded" means
+### CSV
 
-This tool does **not** pretend that a Reddit thread is complete when Reddit has not loaded all of its comments.
+One row per extracted comment. Useful for Excel, Google Sheets, Python, pandas, or other analysis tools.
 
-If Reddit currently shows 80 comments in the page but the thread reports 500 comments, the extractor will export the 80 comments that are actually available to the page and report a completeness estimate.
+### Copy JSON
 
-To collect more of a thread:
+Copies the complete JSON result to the clipboard.
 
-1. Let Reddit load the thread normally.
-2. Expand/load more comments using Reddit's own controls.
-3. Click **Scan loaded content** again.
-4. Export the updated result.
+## Important limitation
 
-This is deliberately different from the old version, which tried to automatically click Reddit's internal expansion controls and could become stuck, miss nested comments, or break when Reddit changed its frontend.
+The script can only expand controls that are actually available to the browser.
 
-## Output example
+It does **not**:
 
-```json
-{
-  "schema_version": "2.0",
-  "tool_version": "2.0.0",
-  "source": "Rendered/loaded Reddit page",
-  "post": {
-    "id": "abc123",
-    "title": "Example thread",
-    "author": "example_user",
-    "subreddit": "r/example",
-    "url": "https://www.reddit.com/r/example/comments/abc123/example/"
-  },
-  "comments": [
-    {
-      "id": "def456",
-      "parent_id": null,
-      "author": "commenter",
-      "score": 12,
-      "depth": 0,
-      "is_op": false,
-      "is_deleted": false,
-      "content": "Example comment",
-      "timestamp": "2026-08-14T10:00:00.000Z",
-      "links": []
-    }
-  ],
-  "stats": {
-    "loaded_comments": 1,
-    "reported_comment_count": 1,
-    "completeness_estimate": "100%"
-  }
-}
+- use Reddit API credentials;
+- bypass authentication;
+- bypass CAPTCHAs;
+- bypass rate limits;
+- access deleted content that Reddit does not expose;
+- defeat access controls;
+- manufacture replies that Reddit has not provided to the page.
+
+For example, if Reddit never exposes a particular reply because it is deleted, removed, unavailable to the account, or behind an access mechanism the page cannot use, the extractor cannot legitimately retrieve it.
+
+## Why the progress bar may stop below 100%
+
+The progress bar is based on the expansion process. It is intentionally **not** calculated as:
+
+```text
+extracted comments / reported comments
 ```
 
-## Why the old version failed
+because Reddit's reported count and rendered comment count can represent different things, especially with deleted/removed comments and dynamic loading.
 
-The previous implementation relied on several fragile assumptions:
+The final status separately reports the number of comments found and, when available, an estimated comparison with Reddit's reported count.
 
-- it automatically clicked Reddit's internal "more comments" controls;
-- it assumed specific `faceplate-partial` URLs and shadow-DOM structures;
-- it assumed all comments could be made available by repeatedly scrolling to the bottom;
-- it used a fixed stale-attempt loop to decide when extraction was complete;
-- it relied on a narrow set of comment body selectors;
-- it could report a misleading percentage even when Reddit had not actually exposed all comments;
-- it immediately downloaded a JSON file, leaving little opportunity to inspect what was extracted.
+## Safety and policy
 
-The new version separates **loading** from **extracting**. Reddit remains responsible for loading its own page, while the extractor only reads what is currently rendered/available and gives you explicit export controls.
+This tool is intentionally browser-side and conservative. It reads the Reddit page that the user is already viewing and interacts with visible page controls. It does not attempt to bypass Reddit's authentication, API restrictions, CAPTCHA, rate limits, or other access controls.
 
-## Current Reddit access restrictions
-
-Reddit's current policies matter for this tool. Reddit says API access requires approval and that developers must comply with its Responsible Builder Policy, Developer Terms and Data API Terms. Reddit also says scraping Reddit without an authorized agreement is prohibited. This script therefore does not use an API key, bypass an access control, or attempt to evade Reddit's restrictions. Use it only in a way that is permitted for your account and use case.
-
-If you need an application that accesses Reddit data programmatically rather than reading the current browser page, use Reddit's current Developer Platform/Data API process and obtain the required authorization.
+Reddit's current policies and terms should be checked before using extracted data for any automated, commercial, or large-scale purpose.
 
 ## Troubleshooting
 
-### Panel does not appear
+### The panel does not appear
 
-- Make sure the userscript is enabled.
-- Refresh the Reddit page.
-- Open a specific post, not a subreddit home/listing.
-- Check the userscript manager's console for errors.
+- Make sure Tampermonkey is enabled.
+- Refresh the Reddit post.
+- Check that the URL is a specific post/thread.
+- Check the userscript manager for JavaScript errors.
 
-### It says 0 comments
+### It finds the main comments but not some replies
 
-Reddit may not have rendered the comments yet. Wait for the thread to load and click **Scan loaded content** again.
+Try scrolling through the thread once and run **Expand replies + extract** again. Reddit can use different controls depending on the thread, account, experiment, or page state.
 
-### Some comments are missing
+### The progress bar stops
 
-Expand/load more comments in Reddit itself, then scan again. Deleted, removed, collapsed, or not-yet-loaded content cannot be exported if it is not available to the page.
+The script intentionally has a maximum of 80 rounds. If Reddit continues changing the page indefinitely, the extractor stops safely and exports the content it could detect.
 
-### CSV looks strange in Excel
+### Some replies are still missing
 
-The exporter quotes fields and uses UTF-8. If your spreadsheet application asks for an encoding, choose UTF-8.
+Those replies may be:
 
-## Version
+- not exposed by Reddit;
+- behind a control whose wording/structure is not recognized by the current version;
+- deleted or removed;
+- unavailable to the current account;
+- not loaded because Reddit stopped responding to further expansion.
 
-**2.0.0 — rebuilt for reliability**
+### Export says 0 comments
 
-The extractor is intentionally conservative: it exports what the browser has actually loaded instead of trying to defeat Reddit's loading, authentication, rate-limit or anti-abuse mechanisms.
+Wait until Reddit has rendered the thread and run the extraction again.
+
+## Output schema
+
+The current export uses `schema_version: "3.0"` and contains:
+
+```text
+post
+comments[]
+stats
+```
+
+The important relationship fields are:
+
+```text
+comments[].id
+comments[].parent_id
+comments[].depth
+```
+
+## Version history
+
+### 3.0.0
+
+- automatic visible reply expansion
+- automatic `load more`/`continue thread` detection
+- repeated rescanning after Reddit updates the page
+- live progress bar
+- expansion round safety limit
+- nested reply preservation
+- improved Shadow DOM scanning
+- JSON / CSV / clipboard export retained
+
+### 2.x
+
+The previous version only extracted content that was already loaded and required the user to expand additional comments manually.
