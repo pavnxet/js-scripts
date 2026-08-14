@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Reddit Thread Extractor — Auto Expand Replies
 // @namespace    js-scripts
-// @version      3.0.0
-// @description  Expand visible Reddit reply controls, wait for newly loaded replies, then extract the loaded thread with progress reporting.
+// @version      3.1.0
+// @description  Expand visible Reddit reply controls, extract post metadata and loaded comments/replies, then export JSON/CSV with progress reporting.
 // @match        https://www.reddit.com/*
 // @match        https://old.reddit.com/*
 // @match        https://new.reddit.com/*
@@ -13,7 +13,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.0.0';
+  const VERSION = '3.1.0';
   const PANEL_ID = 'js-scripts-reddit-extractor';
   const MAX_ROUNDS = 80;
   const state = { data: null, running: false };
@@ -42,20 +42,68 @@
     walk(root); return out;
   }
 
+  function postElement() {
+    return document.querySelector('shreddit-post[thingid],shreddit-post[post-id],article[data-testid="post-container"],div[data-testid="post-container"],.thing.link');
+  }
+
   function getPostId() {
     const m = location.pathname.match(/\/comments\/([a-z0-9]+)/i);
     if (m) return m[1];
-    const el = document.querySelector('shreddit-post[thingid],shreddit-post[id],[data-testid="post-container"],.thing.link');
+    const el = postElement();
     return el?.getAttribute('thingid') || el?.getAttribute('id')?.replace(/^t3_/, '') || el?.dataset?.postId || null;
   }
 
+  function firstText(root, selectors) {
+    for (const selector of selectors) {
+      const n = root?.querySelector?.(selector);
+      const value = clean(n?.innerText || n?.textContent);
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function postBody(el) {
+    const selectors = ['[slot="text-body"]','[slot="text-body"] p','[data-testid="post-content"]','[data-click-id="text"]','.md','[id$="-rtjson-content"]'];
+    return firstText(el, selectors) || firstText(document, selectors);
+  }
+
+  function postLinks(el) {
+    return uniq([...(el?.querySelectorAll?.('a[href]') || [])].map(a => {
+      try { const u = new URL(a.href, location.href); return /^https?:$/i.test(u.protocol) ? u.href : ''; } catch { return ''; }
+    }));
+  }
+
   function getPost() {
-    const el = document.querySelector('shreddit-post[thingid],shreddit-post[post-id],article[data-testid="post-container"],div[data-testid="post-container"],.thing.link');
+    const el = postElement();
     const attr = n => el?.getAttribute(n);
-    const title = clean(el?.querySelector('h1[slot="title"],h1,a.title')?.textContent || document.querySelector('h1[slot="title"],h1,a.title')?.textContent || document.title.replace(/\s*:\s*Reddit.*$/i, ''));
-    const author = clean(attr('author') || el?.querySelector('[data-testid="post_author_link"],a[href*="/user/"],.author')?.textContent);
-    const subreddit = clean(attr('subreddit-prefixed-name') || document.querySelector('a[href*="/r/"],.subreddit')?.textContent);
-    return { id: clean(attr('thingid')) || getPostId(), title, author: author || null, subreddit: subreddit || null, score: num(attr('score')), upvote_ratio: num(attr('upvote-ratio')), created: attr('created-timestamp') || null, comment_count_reported: num(attr('comment-count')), url: document.querySelector('link[rel="canonical"]')?.href || location.href };
+    const title = clean(attr('title') || firstText(el, ['h1[slot="title"]','h1']) || firstText(document, ['h1[slot="title"]','h1']) || document.title.replace(/\s*:\s*Reddit.*$/i, ''));
+    const author = clean(attr('author') || firstText(el, ['[data-testid="post_author_link"]','a[href*="/user/"]','.author']));
+    const subreddit = clean(attr('subreddit-prefixed-name') || attr('subreddit') || firstText(el, ['a[href*="/r/"]','.subreddit']) || firstText(document, ['a[href*="/r/"]','.subreddit']));
+    const canonical = document.querySelector('link[rel="canonical"]')?.href || location.href;
+    const flair = clean(attr('flair-text') || firstText(el, ['[slot="post-flair"]','[data-testid="post-flair"]','.linkflairlabel']));
+    const reported = num(attr('comment-count') || attr('commentcount'));
+    const score = num(attr('score') || firstText(el, ['[score]']) || el?.querySelector?.('[score]')?.getAttribute('score'));
+    const ratio = num(attr('upvote-ratio') || attr('upvote_ratio'));
+    const created = attr('created-timestamp') || attr('created') || el?.querySelector?.('time')?.getAttribute('datetime') || null;
+    const nsfw = attr('is-nsfw') === 'true' || !!el?.querySelector?.('[data-testid="post-nsfw"]');
+    const spoiler = attr('is-spoiler') === 'true' || !!el?.querySelector?.('[data-testid="post-spoiler"]');
+    return {
+      id: clean(attr('thingid') || getPostId()),
+      title: title || null,
+      author: author || null,
+      subreddit: subreddit || null,
+      url: canonical,
+      permalink: canonical,
+      body: postBody(el) || null,
+      score,
+      upvote_ratio: ratio,
+      comment_count_reported: reported,
+      created_at: created,
+      flair: flair || null,
+      is_nsfw: nsfw,
+      is_spoiler: spoiler,
+      links: postLinks(el)
+    };
   }
 
   function commentElements() {
@@ -87,7 +135,7 @@
   }
 
   function linksOf(el) {
-    return uniq([...el.querySelectorAll?.('a[href]') || []].map(a => {
+    return uniq([...(el.querySelectorAll?.('a[href]') || [])].map(a => {
       try { const u = new URL(a.href, location.href); return /^https?:$/i.test(u.protocol) && !/(^|\.)reddit\.com$/i.test(u.hostname) && !u.hostname.endsWith('.reddit.com') ? u.href : ''; } catch { return ''; }
     }));
   }
@@ -95,7 +143,18 @@
   function commentData(el, post) {
     const author = clean(el.getAttribute('author') || el.querySelector?.('[slot="author"],a[href*="/user/"],.author')?.textContent);
     const content = bodyOf(el);
-    return { id: idOf(el), parent_id: parentOf(el), author: author || null, score: num(el.getAttribute('score') || el.querySelector?.('[score]')?.getAttribute('score')), depth: num(el.getAttribute('depth')), is_op: !!author && !!post.author && author === post.author, is_deleted: author === '[deleted]' || el.hasAttribute('deleted'), content: content || (author === '[deleted]' ? '[deleted]' : ''), timestamp: el.querySelector?.('time')?.getAttribute('datetime') || el.getAttribute('created-timestamp') || null, links: linksOf(el) };
+    return {
+      id: idOf(el),
+      parent_id: parentOf(el),
+      author: author || null,
+      score: num(el.getAttribute('score') || el.querySelector?.('[score]')?.getAttribute('score')),
+      depth: num(el.getAttribute('depth')),
+      is_op: !!author && !!post.author && author === post.author,
+      is_deleted: author === '[deleted]' || el.hasAttribute('deleted'),
+      content: content || (author === '[deleted]' ? '[deleted]' : ''),
+      timestamp: el.querySelector?.('time')?.getAttribute('datetime') || el.getAttribute('created-timestamp') || null,
+      links: linksOf(el)
+    };
   }
 
   function extract() {
@@ -109,7 +168,19 @@
     }
     const expected = post.comment_count_reported;
     const completeness = expected > 0 ? Math.min(100, Math.round(comments.length / expected * 100)) : null;
-    return { schema_version: '3.0', tool_version: VERSION, source: 'Rendered Reddit page', post, comments, stats: { loaded_comments: comments.length, reported_comment_count: expected, completeness_estimate: completeness == null ? null : `${completeness}%`, exported_at: new Date().toISOString() } };
+    return {
+      schema_version: '3.1',
+      tool_version: VERSION,
+      source: 'Rendered Reddit page',
+      post,
+      comments,
+      stats: {
+        loaded_comments: comments.length,
+        reported_comment_count: expected,
+        completeness_estimate: completeness == null ? null : `${completeness}%`,
+        exported_at: new Date().toISOString()
+      }
+    };
   }
 
   function expandableControls() {
@@ -150,14 +221,18 @@
   function download(name, content, type) { const blob = new Blob([content], {type}), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500); }
   const slug = v => clean(v).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48)||'thread';
   const csvCell = v => `"${(Array.isArray(v)?v.join(' | '):v??'').toString().replace(/"/g,'""')}"`;
-  function toCSV(data) { const rows=[['id','parent_id','author','score','depth','is_op','is_deleted','timestamp','content','links']]; data.comments.forEach(c=>rows.push([c.id,c.parent_id,c.author,c.score,c.depth,c.is_op,c.is_deleted,c.timestamp,c.content,c.links])); return rows.map(r=>r.map(csvCell).join(',')).join('\r\n'); }
+  function toCSV(data) {
+    const rows = [['post_id','post_title','post_author','subreddit','post_url','post_created_at','post_score','post_upvote_ratio','post_flair','comment_id','parent_id','author','score','depth','is_op','is_deleted','timestamp','content','links']];
+    data.comments.forEach(c => rows.push([data.post.id,data.post.title,data.post.author,data.post.subreddit,data.post.url,data.post.created_at,data.post.score,data.post.upvote_ratio,data.post.flair,c.id,c.parent_id,c.author,c.score,c.depth,c.is_op,c.is_deleted,c.timestamp,c.content,c.links]));
+    return rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+  }
 
   function status(message, kind='') { const el=document.querySelector(`#${PANEL_ID} .rxe-status`); if(el){el.textContent=message;el.dataset.kind=kind;} }
   function progress(value,max,message) { const bar=document.querySelector(`#${PANEL_ID} .rxe-progress-bar`), label=document.querySelector(`#${PANEL_ID} .rxe-progress-label`); if(bar)bar.style.width=`${Math.max(0,Math.min(100,value/max*100))}%`; if(label)label.textContent=message; }
   function buttons(disabled) { document.querySelectorAll(`#${PANEL_ID} button`).forEach(b=>b.disabled=disabled); }
 
   async function start() {
-    if(state.running)return; state.running=true; buttons(true); progress(0,MAX_ROUNDS,'Preparing thread…');
+    if(state.running)return; state.running=true; state.data=null; buttons(true); progress(0,MAX_ROUNDS,'Preparing thread…');
     try {
       if(!getPostId()) throw new Error('Open a specific Reddit post/thread first.');
       window.scrollTo({top:0,behavior:'instant'}); await sleep(300);
@@ -179,7 +254,7 @@
   function createPanel() {
     if(document.getElementById(PANEL_ID))return;
     const style=document.createElement('style'); style.textContent=`#${PANEL_ID}{position:fixed;right:18px;bottom:18px;width:330px;z-index:2147483647;font:13px/1.45 system-ui,sans-serif;color:#18181b}#${PANEL_ID}*{box-sizing:border-box}.rxe-card{background:#fff;border:1px solid #e4e4e7;border-radius:14px;box-shadow:0 18px 50px #0003;overflow:hidden}.rxe-head{padding:13px 15px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between}.rxe-title{font-weight:750}.rxe-version{font-size:10px;color:#71717a}.rxe-body{padding:13px}.rxe-help{font-size:11px;color:#71717a;margin-bottom:10px}.rxe-progress{height:9px;background:#e4e4e7;border-radius:99px;overflow:hidden}.rxe-progress-bar{height:100%;width:0;background:#18181b;transition:width .2s}.rxe-progress-label{font-size:10px;color:#71717a;margin:6px 0 11px}.rxe-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.rxe-actions button{min-height:34px;border:1px solid #d4d4d8;background:#fff;border-radius:8px;font:600 12px system-ui;color:#18181b;cursor:pointer}.rxe-actions .primary{grid-column:1/-1;background:#18181b;color:#fff;border-color:#18181b}.rxe-actions button:disabled{opacity:.5;cursor:not-allowed}.rxe-status{margin-top:9px;padding:8px;background:#f4f4f5;border-radius:8px;font-size:11px;color:#52525b}.rxe-status[data-kind=ok]{background:#f0fdf4;color:#166534}.rxe-status[data-kind=error]{background:#fef2f2;color:#991b1b}@media(max-width:600px){#${PANEL_ID}{left:12px;right:12px;width:auto}}`; document.head.appendChild(style);
-    const p=document.createElement('div'); p.id=PANEL_ID; p.innerHTML=`<div class="rxe-card"><div class="rxe-head"><div class="rxe-title">Reddit Extractor</div><div class="rxe-version">v${VERSION}</div></div><div class="rxe-body"><div class="rxe-help">Automatically expands visible reply/load-more controls, waits for new replies, then extracts the thread.</div><div class="rxe-progress"><div class="rxe-progress-bar"></div></div><div class="rxe-progress-label">Ready</div><div class="rxe-actions"><button class="primary" data-action="start">Expand replies + extract</button><button data-action="json">↓ JSON</button><button data-action="csv">↓ CSV</button><button data-action="copy">Copy JSON</button></div><div class="rxe-status">Ready — open a Reddit post.</div></div></div>`;
+    const p=document.createElement('div'); p.id=PANEL_ID; p.innerHTML=`<div class="rxe-card"><div class="rxe-head"><div class="rxe-title">Reddit Extractor</div><div class="rxe-version">v${VERSION}</div></div><div class="rxe-body"><div class="rxe-help">Expands visible reply/load-more controls, waits for new replies, then extracts post metadata + the rendered thread.</div><div class="rxe-progress"><div class="rxe-progress-bar"></div></div><div class="rxe-progress-label">Ready</div><div class="rxe-actions"><button class="primary" data-action="start">Expand replies + extract</button><button data-action="json">↓ JSON</button><button data-action="csv">↓ CSV</button><button data-action="copy">Copy JSON</button></div><div class="rxe-status">Ready — open a Reddit post.</div></div></div>`;
     document.body.appendChild(p); p.addEventListener('click',e=>{const a=e.target.closest('button')?.dataset.action;if(a==='start')start();if(a==='json')json();if(a==='csv')csv();if(a==='copy')copy();});
   }
   createPanel();
