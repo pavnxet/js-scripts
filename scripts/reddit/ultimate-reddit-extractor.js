@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Thread Extractor — Loaded Content
 // @namespace    js-scripts
-// @version      2.0.0
+// @version      2.0.1
 // @description  Export the Reddit post and comments currently loaded in the page as JSON or CSV.
 // @match        https://www.reddit.com/*
 // @match        https://old.reddit.com/*
@@ -13,11 +13,11 @@
 (() => {
   'use strict';
 
-  // This tool intentionally extracts content already loaded in the current
-  // Reddit page. It does not bypass authentication, rate limits, CAPTCHAs,
-  // deleted content, or Reddit's API restrictions.
+  // Browser-side extractor for content already loaded in the current Reddit page.
+  // It does not bypass authentication, CAPTCHAs, rate limits, deleted content,
+  // API restrictions, or Reddit safety controls.
 
-  const VERSION = '2.0.0';
+  const VERSION = '2.0.1';
   const PANEL_ID = 'js-scripts-reddit-extractor';
   const state = { lastExport: null, observer: null };
 
@@ -28,7 +28,6 @@
     const n = Number(String(value).replace(/,/g, '').trim());
     return Number.isFinite(n) ? n : null;
   };
-
   const unique = values => [...new Set(values.filter(Boolean))];
 
   function allElements(root = document) {
@@ -45,11 +44,11 @@
   }
 
   function queryAllDeep(selectors) {
-    const wanted = selectors.join(',');
     const found = [];
+    const selector = selectors.join(',');
     const walk = root => {
       if (!root || !root.querySelectorAll) return;
-      found.push(...root.querySelectorAll(wanted));
+      found.push(...root.querySelectorAll(selector));
       for (const el of root.querySelectorAll('*')) {
         if (el.shadowRoot) walk(el.shadowRoot);
       }
@@ -61,26 +60,29 @@
   function getPostId() {
     const match = location.pathname.match(/\/comments\/([a-z0-9]+)/i);
     if (match) return match[1];
-    const post = document.querySelector('shreddit-post[thingid], shreddit-post[id]');
-    return post?.getAttribute('thingid') || post?.getAttribute('id')?.replace(/^t3_/, '') || null;
+    const post = document.querySelector('shreddit-post[thingid], shreddit-post[id], [data-testid="post-container"], .thing.link');
+    return post?.getAttribute('thingid') ||
+      post?.getAttribute('id')?.replace(/^t3_/, '') ||
+      post?.dataset?.postId || null;
   }
 
   function getPostElement() {
-    return document.querySelector('shreddit-post[thingid], shreddit-post[post-id], article[data-testid="post-container"], div[data-testid="post-container"]');
+    return document.querySelector(
+      'shreddit-post[thingid], shreddit-post[post-id], article[data-testid="post-container"], div[data-testid="post-container"], .thing.link'
+    );
   }
 
   function getPostData() {
     const el = getPostElement();
     const canonical = document.querySelector('link[rel="canonical"]')?.href || location.href;
+    const attr = name => el?.getAttribute(name);
     const title = text(
-      el?.querySelector('h1[slot="title"], h1')?.textContent ||
-      document.querySelector('h1[slot="title"], h1')?.textContent ||
+      el?.querySelector('h1[slot="title"], h1, a.title')?.textContent ||
+      document.querySelector('h1[slot="title"], h1, a.title')?.textContent ||
       document.title.replace(/\s*:\s*Reddit.*$/i, '')
     );
-
-    const attr = name => el?.getAttribute(name);
-    const author = text(attr('author')) || text(document.querySelector('[data-testid="post_author_link"], a[href*="/user/"]')?.textContent);
-    const subreddit = text(attr('subreddit-prefixed-name')) || text(document.querySelector('a[href*="/r/"]')?.textContent);
+    const author = text(attr('author')) || text(document.querySelector('[data-testid="post_author_link"], a[href*="/user/"], .author')?.textContent);
+    const subreddit = text(attr('subreddit-prefixed-name')) || text(document.querySelector('a[href*="/r/"], .subreddit')?.textContent);
 
     return {
       id: text(attr('thingid')) || getPostId(),
@@ -101,28 +103,29 @@
       'shreddit-comment[thingid]',
       'shreddit-comment[id]',
       '[data-testid="comment"]',
-      'div[data-testid="comment"]'
+      'div[data-testid="comment"]',
+      '.thing.comment'
     ];
-    const elements = queryAllDeep(selectors);
-    return [...new Set(elements)].filter(el => {
-      const id = el.getAttribute('thingid') || el.getAttribute('id') || el.dataset?.commentId;
-      return Boolean(id);
+    return queryAllDeep(selectors).filter(el => {
+      const id = el.getAttribute('thingid') || el.getAttribute('id') || el.dataset?.commentId || el.dataset?.fullName;
+      return Boolean(id && (/^t1_/i.test(id) || /comment/i.test(el.className || '') || el.matches('shreddit-comment, [data-testid="comment"], div[data-testid="comment"]')));
     });
   }
 
   function commentId(el) {
     return text(el.getAttribute('thingid')) ||
       text(el.dataset?.commentId) ||
+      text(el.dataset?.fullName)?.replace(/^t1_/, '') ||
       text(el.getAttribute('id')).replace(/^t1_/, '') || null;
   }
 
   function parentId(el) {
-    const explicit = el.getAttribute('parentid') || el.getAttribute('parent-id');
-    if (explicit) return explicit.replace(/^t1_/, '');
+    const explicit = el.getAttribute('parentid') || el.getAttribute('parent-id') || el.dataset?.parentId;
+    if (explicit) return explicit.replace(/^t1_/, '').replace(/^t3_/, '');
 
     let parent = el.parentElement;
     while (parent) {
-      if (parent.matches?.('shreddit-comment[thingid], shreddit-comment[id], [data-testid="comment"]')) {
+      if (parent.matches?.('shreddit-comment[thingid], shreddit-comment[id], [data-testid="comment"], div[data-testid="comment"], .thing.comment')) {
         return commentId(parent);
       }
       parent = parent.parentElement;
@@ -137,7 +140,8 @@
       '[id$="-rtjson-content"]',
       '[id$="-content"]',
       '.md',
-      '[data-testid="comment-content"]'
+      '[data-testid="comment-content"]',
+      '.RichTextJSON-root'
     ];
 
     for (const selector of selectors) {
@@ -146,7 +150,6 @@
       if (value) return value;
     }
 
-    // Reddit can render the body inside an open shadow root.
     for (const node of allElements(el)) {
       const value = text(node.innerText || node.textContent);
       if (value && value.length > 1 && value.length < 20000 && /[a-zA-Z0-9\u0900-\u097F]/.test(value)) {
@@ -157,7 +160,8 @@
   }
 
   function commentLinks(el) {
-    return unique([...el.querySelectorAll?.('a[href]') || []].map(a => {
+    const anchors = el.querySelectorAll?.('a[href]') || [];
+    return unique([...anchors].map(a => {
       try { return new URL(a.href, location.href).href; } catch { return ''; }
     }).filter(href => {
       if (!href || !/^https?:/i.test(href)) return false;
@@ -169,23 +173,21 @@
   }
 
   function getCommentData(el, post) {
-    const author = text(el.getAttribute('author')) || text(el.querySelector?.('[slot="author"], a[href*="/user/"]')?.textContent);
-    const deleted = author === '[deleted]' || el.hasAttribute('deleted') || /\[deleted\]/i.test(commentContent(el));
+    const author = text(el.getAttribute('author')) ||
+      text(el.querySelector?.('[slot="author"], a[href*="/user/"], .author')?.textContent);
     const body = commentContent(el);
-    const scoreAttr = el.getAttribute('score');
-    const depthAttr = el.getAttribute('depth');
-    const timestamp = el.querySelector?.('time')?.getAttribute('datetime') || el.getAttribute('created-timestamp') || null;
+    const deleted = author === '[deleted]' || el.hasAttribute('deleted') || /\[deleted\]/i.test(body);
 
     return {
       id: commentId(el),
       parent_id: parentId(el),
       author: author || null,
-      score: number(scoreAttr),
-      depth: number(depthAttr),
+      score: number(el.getAttribute('score') || el.querySelector?.('[score]')?.getAttribute('score')),
+      depth: number(el.getAttribute('depth')),
       is_op: Boolean(author && post.author && author === post.author),
       is_deleted: deleted,
       content: body || (deleted ? '[deleted]' : ''),
-      timestamp,
+      timestamp: el.querySelector?.('time')?.getAttribute('datetime') || el.getAttribute('created-timestamp') || null,
       links: commentLinks(el)
     };
   }
@@ -194,10 +196,9 @@
     const post = getPostData();
     if (!post.id) throw new Error('Open a Reddit post/thread first. A subreddit listing is not a thread.');
 
-    const elements = getCommentElements();
     const seen = new Set();
     const comments = [];
-    for (const el of elements) {
+    for (const el of getCommentElements()) {
       const item = getCommentData(el, post);
       if (!item.id || seen.has(item.id)) continue;
       seen.add(item.id);
@@ -217,7 +218,7 @@
         loaded_comments: comments.length,
         reported_comment_count: expected,
         completeness_estimate: completeness == null ? null : `${completeness}%`,
-        note: 'Only comments currently loaded in the page are exported. Expand/load more comments in Reddit and run Extract again for additional content.'
+        note: 'Only comments currently loaded in the page are exported. Expand/load more comments in Reddit and scan again for additional content.'
       },
       exported_at: new Date().toISOString()
     };
@@ -246,9 +247,7 @@
 
   function toCSV(data) {
     const rows = [['id','parent_id','author','score','depth','is_op','is_deleted','timestamp','content','links']];
-    for (const c of data.comments) rows.push([
-      c.id, c.parent_id, c.author, c.score, c.depth, c.is_op, c.is_deleted, c.timestamp, c.content, c.links
-    ]);
+    for (const c of data.comments) rows.push([c.id, c.parent_id, c.author, c.score, c.depth, c.is_op, c.is_deleted, c.timestamp, c.content, c.links]);
     return rows.map(row => row.map(csvCell).join(',')).join('\r\n');
   }
 
@@ -263,7 +262,8 @@
     try {
       const data = extract();
       state.lastExport = data;
-      setStatus(`Loaded ${data.comments.length} comments`, 'ok');
+      const suffix = data.stats.completeness_estimate ? ` · ${data.stats.completeness_estimate} of reported count` : '';
+      setStatus(`Loaded ${data.comments.length} comments${suffix}`, 'ok');
       return data;
     } catch (error) {
       setStatus(error.message || 'Extraction failed', 'error');
@@ -272,8 +272,10 @@
     }
   }
 
+  function getData() { return state.lastExport || runExtract(); }
+
   function downloadJSON() {
-    const data = state.lastExport || runExtract();
+    const data = getData();
     if (!data) return;
     const name = `reddit_${slug(data.post.subreddit)}_${data.post.id || Date.now()}.json`;
     download(name, JSON.stringify(data, null, 2), 'application/json;charset=utf-8');
@@ -281,7 +283,7 @@
   }
 
   function downloadCSV() {
-    const data = state.lastExport || runExtract();
+    const data = getData();
     if (!data) return;
     const name = `reddit_${slug(data.post.subreddit)}_${data.post.id || Date.now()}_comments.csv`;
     download(name, toCSV(data), 'text/csv;charset=utf-8');
@@ -289,7 +291,7 @@
   }
 
   async function copyJSON() {
-    const data = state.lastExport || runExtract();
+    const data = getData();
     if (!data) return;
     try {
       await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
@@ -325,7 +327,7 @@
       <div class="rxe-card">
         <div class="rxe-head"><div class="rxe-title">Reddit Extractor</div><div class="rxe-version">v${VERSION}</div></div>
         <div class="rxe-body">
-          <div class="rxe-help">Extracts the post and comments already loaded in this Reddit page. Expand/load more comments in Reddit before scanning again.</div>
+          <div class="rxe-help">Reads the post and comments already loaded in this Reddit page. Expand/load more comments in Reddit, then scan again.</div>
           <div class="rxe-actions">
             <button class="primary" data-action="extract">↻ Scan loaded content</button>
             <button data-action="json">↓ JSON</button>
@@ -353,11 +355,10 @@
     }
     if (!document.body) return;
     createPanel();
-
     const postId = getPostId();
     if (postId) setStatus(`Ready — post ${postId}`);
 
-    // Reddit is a SPA. Recreate the panel after client-side navigation.
+    // Reddit is a SPA. Keep the panel available after client-side navigation.
     state.observer = new MutationObserver(() => {
       if (!document.getElementById(PANEL_ID) && document.body) createPanel();
     });
