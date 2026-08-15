@@ -1,0 +1,13 @@
+{
+  "name": "nvidia-gpt-oss-api",
+  "private": true,
+  "version": "1.0.0",
+  "description": "OpenAI-compatible Cloudflare Worker proxy for NVIDIA-hosted OpenAI GPT-OSS-120B.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "latest"
+  }
+}
