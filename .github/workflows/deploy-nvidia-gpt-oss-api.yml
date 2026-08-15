@@ -26,6 +26,25 @@ jobs:
         working-directory: scripts/nvidia-gpt-oss-api
         run: npm install
 
+      - name: Configure OAuth registration for ChatGPT
+        working-directory: scripts/nvidia-gpt-oss-api
+        run: |
+          set -euo pipefail
+          # ChatGPT's connector is currently reaching this server with a CIMD
+          # client_id URL. The Worker cannot reliably fetch ChatGPT's private
+          # CIMD document from its server-side runtime, so advertise DCR instead.
+          # DCR is explicitly supported by the MCP authorization specification.
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('worker.js')
+          s = p.read_text()
+          old = 'client_id_metadata_document_supported: true'
+          new = 'client_id_metadata_document_supported: false'
+          if old not in s:
+              raise SystemExit('Expected OAuth metadata flag was not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
       - name: Verify Cloudflare API token
         env:
           CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
