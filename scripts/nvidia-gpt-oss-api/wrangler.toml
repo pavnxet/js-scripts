@@ -2,7 +2,13 @@ name = "nvidia-gpt-oss-api"
 main = "worker.js"
 compatibility_date = "2026-08-15"
 
+# GitHub Actions replaces REPLACE_WITH_KV_ID with the automatically provisioned
+# Cloudflare KV namespace ID before deployment.
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "REPLACE_WITH_KV_ID"
+
 # Secrets are intentionally NOT stored in this file.
-# Set them with:
-#   npx wrangler secret put NVIDIA_API_KEY
-#   npx wrangler secret put API_ACCESS_KEY
+# NVIDIA_API_KEY is the NVIDIA Build key.
+# API_ACCESS_KEY is now an internal owner/OAuth signing secret; it is never
+# supplied to ChatGPT as an API key during MCP authentication.
