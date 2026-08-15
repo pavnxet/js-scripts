@@ -1,0 +1,8 @@
+name = "nvidia-gpt-oss-api"
+main = "worker.js"
+compatibility_date = "2026-08-15"
+
+# Secrets are intentionally NOT stored in this file.
+# Set them with:
+#   npx wrangler secret put NVIDIA_API_KEY
+#   npx wrangler secret put API_ACCESS_KEY
