@@ -3,16 +3,16 @@
 This Cloudflare Worker exposes NVIDIA's hosted `openai/gpt-oss-120b` in two ways:
 
 1. **OpenAI-compatible API** for apps, scripts, agents, and MCP servers.
-2. **Remote MCP server** at `/mcp`, allowing ChatGPT to use GPT-OSS-120B as a specialized technical sub-agent/assistant.
+2. **OAuth 2.1 protected remote MCP server** at `/mcp`, allowing ChatGPT to use GPT-OSS-120B as a specialized technical sub-agent/assistant.
 
 ## Architecture
 
 ```text
 ChatGPT custom MCP app
         |
-        |  POST /mcp
+        | OAuth 2.1 + PKCE
         v
-Cloudflare Worker
+Cloudflare Worker /mcp
         |
         | NVIDIA_API_KEY (Cloudflare secret)
         v
@@ -22,20 +22,32 @@ NVIDIA NIM
 openai/gpt-oss-120b
 ```
 
-The NVIDIA key stays server-side and is never returned to ChatGPT or other clients.
+The NVIDIA key stays server-side and is never returned to ChatGPT.
 
-## HTTP endpoints
+## OAuth endpoints
 
-- `GET /health` — public health check.
-- `GET /mcp` — authenticated MCP endpoint information.
-- `POST /mcp` — authenticated Streamable HTTP MCP JSON-RPC endpoint.
-- `GET /v1/models` — authenticated model list.
-- `POST /v1/chat/completions` — authenticated OpenAI-compatible chat completions proxy.
-- Other `/v1/*` requests are proxied to NVIDIA after authentication.
+- `GET /.well-known/oauth-protected-resource`
+- `GET /.well-known/oauth-protected-resource/mcp`
+- `GET /.well-known/oauth-authorization-server`
+- `POST /oauth/register` — Dynamic Client Registration fallback.
+- `GET/POST /oauth/authorize` — OAuth authorization + consent page.
+- `POST /oauth/token` — authorization-code and refresh-token exchange.
+
+The authorization server advertises **Client ID Metadata Documents (CIMD)** support and **S256 PKCE**. ChatGPT can therefore use its supported OAuth client setup method without receiving the NVIDIA API key.
+
+During authorization, the Worker asks for the private owner authorization key stored as the existing `API_ACCESS_KEY` Cloudflare secret. That key is entered only on the Worker authorization page; it is not entered into the ChatGPT plugin configuration and is never sent to NVIDIA.
+
+The Worker issues short-lived bearer access tokens and refresh tokens. Cloudflare KV is used to prevent authorization-code reuse and rotate refresh tokens.
+
+## MCP endpoint
+
+```text
+https://nvidia-gpt-oss-api.pavneet1804.workers.dev/mcp
+```
+
+Use this URL in ChatGPT's **New Plugin / custom MCP server** screen and select **OAuth** authentication. ChatGPT should discover the OAuth metadata automatically.
 
 ## MCP tools
-
-ChatGPT can discover these tools from `/mcp`:
 
 - `ask_tech_assistant` — general technical assistant for programming, APIs, AI, cloud, MCP, GitHub, automation, and architecture.
 - `code_review` — security, correctness, bugs, maintainability, and performance review.
@@ -44,27 +56,25 @@ ChatGPT can discover these tools from `/mcp`:
 - `explain_technology` — beginner/intermediate/advanced explanations.
 - `architecture_advisor` — system architecture and trade-off advice.
 
-All MCP tools are inference-only/read-only: they do not modify GitHub, Cloudflare, files, or external systems. They only ask GPT-OSS-120B to analyze the information supplied by ChatGPT.
+All MCP tools are inference-only/read-only: they do not modify GitHub, Cloudflare, files, or external systems. They only ask GPT-OSS-120B to analyze information supplied by ChatGPT.
 
 ## Connect to ChatGPT
 
-ChatGPT supports remote MCP servers through custom apps/connectors. The exact UI and availability depend on the ChatGPT plan and workspace settings. OpenAI currently documents full MCP app support with developer mode for Business and Enterprise/Edu workspaces, while Pro users can use developer-mode MCP with read/fetch permissions where enabled. citehttps://help.openai.com/en/articles/12584461
-
-Use this remote MCP URL:
+1. Open **New Plugin / custom MCP server**.
+2. Name it `Nvidia Guide`.
+3. Server URL:
 
 ```text
 https://nvidia-gpt-oss-api.pavneet1804.workers.dev/mcp
 ```
 
-The server requires a Bearer token matching `API_ACCESS_KEY`. If your ChatGPT MCP configuration offers HTTP header authentication, configure:
+4. Select **OAuth**.
+5. Let ChatGPT discover the authorization server metadata.
+6. Choose the available client setup method (CIMD when offered; DCR is supported as a fallback).
+7. Complete the authorization page using your private owner authorization key.
+8. Scan/discover the MCP tools and create the app.
 
-```text
-Authorization: Bearer YOUR_API_ACCESS_KEY
-```
-
-Do **not** enter your `NVIDIA_API_KEY` into ChatGPT. ChatGPT only needs the proxy access key.
-
-After the app is connected, ChatGPT can select/invoke the tools when relevant. Depending on the ChatGPT surface, you may see the app/tool name rather than a literal `@` tag. The model can then delegate technical subtasks to GPT-OSS-120B through this MCP server.
+Do **not** enter `NVIDIA_API_KEY` into ChatGPT.
 
 ## Deploy automatically
 
@@ -79,9 +89,19 @@ NVIDIA_API_KEY
 API_ACCESS_KEY
 ```
 
-The workflow deploys the Worker and then writes the two runtime secrets to Cloudflare. Secrets are never committed to the repository.
+The workflow automatically:
+
+1. Verifies the Cloudflare credentials.
+2. Creates the `nvidia-gpt-oss-api-oauth` KV namespace if it does not already exist.
+3. Injects the KV namespace ID into the deployment configuration.
+4. Deploys the Worker.
+5. Stores `NVIDIA_API_KEY` and `API_ACCESS_KEY` as Cloudflare Worker secrets.
+
+No manual Cloudflare deployment is required.
 
 ## OpenAI-compatible API
+
+The legacy API remains available for scripts and applications:
 
 ```python
 from openai import OpenAI
@@ -104,7 +124,9 @@ print(response.choices[0].message.content)
 ## Security
 
 - Never commit `NVIDIA_API_KEY` or `API_ACCESS_KEY`.
-- Keep authentication enabled on `/mcp` and `/v1/*`.
-- `NVIDIA_API_KEY` is only used server-side.
-- `API_ACCESS_KEY` is the client-to-proxy credential.
+- `NVIDIA_API_KEY` is only used server-side to call NVIDIA.
+- `API_ACCESS_KEY` is an internal owner/OAuth signing secret; it is not the credential ChatGPT stores for MCP.
+- OAuth access tokens are short-lived and scoped to `mcp:tools`.
+- PKCE S256 is required for authorization-code exchange.
+- Authorization codes are single-use when the OAuth KV binding is available.
 - This Worker does not increase NVIDIA's quota or bypass NVIDIA rate limits.
