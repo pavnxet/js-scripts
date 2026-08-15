@@ -45,32 +45,6 @@ jobs:
           echo "$ACCOUNT" | jq '{success, result: {id, name}}'
           test "$(echo "$ACCOUNT" | jq -r '.success')" = "true"
 
-      - name: Provision OAuth KV namespace
-        working-directory: scripts/nvidia-gpt-oss-api
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          set -euo pipefail
-          TITLE="nvidia-gpt-oss-api-oauth"
-          LIST=$(curl -fsS \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -H "Content-Type: application/json" \
-            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces?per_page=100")
-          KV_ID=$(echo "$LIST" | jq -r --arg title "$TITLE" '.result[] | select(.title == $title) | .id' | head -n 1)
-          if [ -z "$KV_ID" ] || [ "$KV_ID" = "null" ]; then
-            CREATED=$(curl -fsS -X POST \
-              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              -H "Content-Type: application/json" \
-              --data "{\"title\":\"${TITLE}\"}" \
-              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces")
-            KV_ID=$(echo "$CREATED" | jq -r '.result.id')
-          fi
-          test -n "$KV_ID"
-          test "$KV_ID" != "null"
-          echo "Using OAuth KV namespace: $KV_ID"
-          sed -i "s/REPLACE_WITH_KV_ID/${KV_ID}/" wrangler.toml
-
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
