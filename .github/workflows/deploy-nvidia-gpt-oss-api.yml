@@ -59,3 +59,35 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: scripts/nvidia-gpt-oss-api
+
+      - name: Set NVIDIA API secret on Cloudflare
+        working-directory: scripts/nvidia-gpt-oss-api
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "$NVIDIA_API_KEY" ]; then
+            echo "NVIDIA_API_KEY GitHub secret is missing."
+            exit 1
+          fi
+          printf '%s' "$NVIDIA_API_KEY" | npx wrangler secret put NVIDIA_API_KEY \
+            --api-token "$CLOUDFLARE_API_TOKEN" \
+            --account-id "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Set API access secret on Cloudflare
+        working-directory: scripts/nvidia-gpt-oss-api
+        env:
+          API_ACCESS_KEY: ${{ secrets.API_ACCESS_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "$API_ACCESS_KEY" ]; then
+            echo "API_ACCESS_KEY GitHub secret is missing."
+            exit 1
+          fi
+          printf '%s' "$API_ACCESS_KEY" | npx wrangler secret put API_ACCESS_KEY \
+            --api-token "$CLOUDFLARE_API_TOKEN" \
+            --account-id "$CLOUDFLARE_ACCOUNT_ID"
