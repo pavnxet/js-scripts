@@ -72,9 +72,7 @@ jobs:
             echo "NVIDIA_API_KEY GitHub secret is missing."
             exit 1
           fi
-          printf '%s' "$NVIDIA_API_KEY" | npx wrangler secret put NVIDIA_API_KEY \
-            --api-token "$CLOUDFLARE_API_TOKEN" \
-            --account-id "$CLOUDFLARE_ACCOUNT_ID"
+          printf '%s' "$NVIDIA_API_KEY" | npx wrangler secret put NVIDIA_API_KEY
 
       - name: Set API access secret on Cloudflare
         working-directory: scripts/nvidia-gpt-oss-api
@@ -88,6 +86,4 @@ jobs:
             echo "API_ACCESS_KEY GitHub secret is missing."
             exit 1
           fi
-          printf '%s' "$API_ACCESS_KEY" | npx wrangler secret put API_ACCESS_KEY \
-            --api-token "$CLOUDFLARE_API_TOKEN" \
-            --account-id "$CLOUDFLARE_ACCOUNT_ID"
+          printf '%s' "$API_ACCESS_KEY" | npx wrangler secret put API_ACCESS_KEY
