@@ -10,5 +10,5 @@
 // @grant        none
 // ==/UserScript==
 
-// Original Reddit userscript moved to the flat Tampermonkey folder.
-// Full implementation is preserved from the previous repository location.
+// The complete original implementation remains at scripts/reddit/ultimate-reddit-extractor.js.
+// This flat entry is intentionally kept as the Tampermonkey category marker.
