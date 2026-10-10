@@ -1,4 +1,4 @@
-﻿# AGENTS.md — Repository Management Guide
+# AGENTS.md — Repository Management Guide
 
 > Read this before creating, moving, renaming, or deleting any file in this repo. It is the
 > authoritative convention guide for **js-scripts** (`pavnxet/js-scripts`).
@@ -48,8 +48,9 @@ Follow these steps in order:
    - **Preconditions** (e.g. "scroll to the bottom first", "requires GM_* grants").
    - Output/behavior notes and any limitations.
 4. Add a row to the **"Scripts & tools"** table in the root `README.md`.
-5. If it's a Cloudflare Worker, add/update its `.github/workflows/*.yml` deploy trigger paths.
-6. If it should appear on the dashboard, add a card to `index.html`.
+5. **Always add a card to `index.html`** — mandatory, never skipped (see §8 for the template).
+6. If it's a Cloudflare Worker, add/update its `.github/workflows/*.yml` deploy trigger paths.
+7. Add a row to the quick-reference table in §7 of this file.
 
 ---
 
@@ -67,6 +68,14 @@ Follow these steps in order:
 
 ## 5. Rules for modifying existing items
 
+- **Keep every index in sync.** Three places list what this repo contains:
+  1. the root `README.md` "Scripts & tools" table,
+  2. the `index.html` dashboard (cards **and** the hero terminal `ls` listing),
+  3. the quick-reference table in §7 of this file.
+
+  Anything created, renamed or removed must be reflected in **all three in the same commit**. A task
+  is not finished while an item exists in the repo but is missing from any index — or while an index
+  points at something that no longer exists.
 - **Never silently break paths.** If you move or rename a folder, update every reference to it:
   - root `README.md` table
   - `index.html` dashboard links
@@ -91,9 +100,47 @@ Follow these steps in order:
 
 | Folder | Type | Deploy trigger |
 |---|---|---|
-| `youtube-subscriptions-to-csv/` | browser script | — |
+| `youtube-subscriptions-to-csv/` | snippet + userscript | — |
 | `reddit-thread-extractor/` | userscript | — |
 | `youtube-hide-upcoming/` | userscript | — |
 | `nvidia-gpt-oss-api/` | Cloudflare Worker | `.github/workflows/deploy-nvidia-gpt-oss-api.yml` |
 | `thinking-mcp/` | Cloudflare Worker | `.github/workflows/deploy-thinking-mcp.yml` |
 | `qr-print-station/` | web app | — |
+
+---
+
+## 8. Dashboard / index updates (`index.html`) — mandatory
+
+`index.html` is the GitHub Pages landing page. It must list **every** item in the repo. Whenever you
+add, rename or remove an item, update the dashboard **in the same commit** — two places:
+
+1. **The hero terminal `ls` block** — the list of `<div class="blue">folder-name/</div>` lines.
+2. **A card in the `.grid`** — copy this template:
+
+```html
+<article class="card" data-name="lowercase search keywords" data-type="userscript">
+  <div class="icon">XX</div>
+  <h3>Display Name</h3>
+  <p>One or two sentences on what it does.</p>
+  <div class="meta"><span class="tag">JavaScript</span><span class="tag">YouTube</span></div>
+  <div class="open"><a href="https://github.com/pavnxet/js-scripts/tree/main/<folder>" target="_blank" rel="noopener noreferrer">Open project <span class="arrow">→</span></a><span class="tag">USERSCRIPT</span></div>
+  <div class="cardlinks"><a class="mini" href="https://github.com/pavnxet/js-scripts/tree/main/<folder>" target="_blank" rel="noopener noreferrer">README</a></div>
+</article>
+```
+
+Rules for the card:
+
+- `data-type` drives the filter chips — use one or more of `script`, `userscript`, `worker`,
+  `webapp`, `notes`, space-separated. An item that is both a snippet and a userscript gets both.
+- `data-name` is the **search index**: lowercase name + description keywords + tags. A card without
+  it becomes unsearchable.
+- Every card needs a **README link** in `.cardlinks`.
+- Userscripts (`*.user.js`) also get an install link to the raw URL:
+  `https://raw.githubusercontent.com/pavnxet/js-scripts/main/<folder>/<file>.user.js`.
+- Paste-in scripts also get a copy button:
+  `<button class="mini" type="button" data-copy="./<folder>/<file>.js">⧉ Copy snippet</button>`.
+- **No JavaScript changes are needed** — the dashboard script auto-discovers `.card` elements on
+  load. Just add the markup.
+- Reuse the existing classes (`.card`, `.icon`, `.meta`, `.tag`, `.open`, `.cardlinks`, `.mini`); do
+  not invent bespoke inline styles.
+- The grid's closing `</div>` must stay **after** the last card. Insert new cards before it.
