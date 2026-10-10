@@ -144,10 +144,19 @@ Rules for the card:
   load. Just add the markup.
 - Reuse the existing classes (`.card`, `.icon`, `.meta`, `.tag`, `.open`, `.cardlinks`, `.mini`); do
   not invent bespoke inline styles.
-- The dashboard uses the **PAVNXET Liquid Glass** theme (warm aurora mesh + translucent surfaces).
-  Never hard-code colors: use the tokens in `:root`, and add any new token to **both** `:root` and
-  `[data-theme=dark]` so the light and dark variants stay correct.
+- The dashboard uses the **PAVNXET Liquid Glass v2 (advanced)** theme — a warm aurora mesh under
+  translucent, refracting glass surfaces. Never hard-code colours: use the tokens in `:root`, and add
+  any new token to **both** `:root` and `[data-theme=dark]` so the light and dark variants stay correct.
+- v2 rules worth preserving:
+  - **Scope transitions.** Use `--transition-liquid` / `--transition-elastic` (explicit property
+    lists) instead of `transition: all`, which animates unnecessary properties.
+  - **Animate `transform`, not layout/paint properties.** The aurora drifts by translating and
+    scaling itself (it is `inset: -10%` so there is room), rather than animating `background-position`.
+  - **Keep card content above the speculars.** `.card::before`/`::after` sit at `z-index: 2`, so
+    `.card > *` is lifted to `z-index: 3`. If you add a wrapper inside a card, give it `z-index: 3`.
+  - **Ambient animation pauses while scrolling** via `body.is-scrolling` (toggled by the dashboard
+    script), and is disabled entirely under `prefers-reduced-motion`.
 - Do not nest `backdrop-filter` — small pills (`.tag`, `.chip`, `.mini`, `kbd`) deliberately use
   translucent gradients *without* blur, since they sit on already-blurred glass. Blur is reserved
-  for the major surfaces (`.nav`, `.card`, `.hero-card`, `.search`, `.terminal`, `.empty`).
+  for the major surfaces (`.nav`, `.card`, `.hero-card`, `.search`, `.terminal`, `.empty`, `.footer`).
 - The grid's closing `</div>` must stay **after** the last card. Insert new cards before it.
