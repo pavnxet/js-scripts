@@ -102,7 +102,7 @@ Follow these steps in order:
 |---|---|---|
 | `youtube-subscriptions-to-csv/` | snippet + userscript | — |
 | `reddit-thread-extractor/` | userscript | — |
-| `reddit-sidebar-resizer/` | console snippet | — |
+| `reddit-sidebar-resizer/` | snippet + userscript | — |
 | `youtube-hide-upcoming/` | userscript | — |
 | `nvidia-gpt-oss-api/` | Cloudflare Worker | `.github/workflows/deploy-nvidia-gpt-oss-api.yml` |
 | `thinking-mcp/` | Cloudflare Worker | `.github/workflows/deploy-thinking-mcp.yml` |

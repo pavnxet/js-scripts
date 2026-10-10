@@ -31,7 +31,7 @@ a `README.md` inside, then list it in the table below.
 |---|---|---|
 | [`youtube-subscriptions-to-csv`](youtube-subscriptions-to-csv/) | Exports every subscribed channel to CSV — canonical `UC...` ID, channel URL, and title. Console snippet + Tampermonkey userscript. | `youtube.com/feed/channels` |
 | [`reddit-thread-extractor`](reddit-thread-extractor/) | Extracts a Reddit post + its comments/replies (auto-expanding) and exports JSON/CSV. | Tampermonkey, any `reddit.com` post |
-| [`reddit-sidebar-resizer`](reddit-sidebar-resizer/) | Adds a draggable divider to resize Reddit's right sidebar; the width is saved in `localStorage`. | Console, `reddit.com` |
+| [`reddit-sidebar-resizer`](reddit-sidebar-resizer/) | Adds a draggable divider to resize Reddit's right sidebar; the width is saved in `localStorage`. Console snippet + Tampermonkey userscript. | Tampermonkey or console, `reddit.com` |
 | [`youtube-hide-upcoming`](youtube-hide-upcoming/) | Hides Upcoming/Premiere/Scheduled cards on YouTube, with a Tampermonkey toggle. | Tampermonkey, `*.youtube.com` |
 | [`nvidia-gpt-oss-api`](nvidia-gpt-oss-api/) | OpenAI-compatible Cloudflare Worker proxy for NVIDIA's GPT-OSS-120B. | Deployed Worker |
 | [`thinking-mcp`](thinking-mcp/) | Remote MCP server (Cloudflare Worker) providing reasoning tools. | Deployed Worker |
