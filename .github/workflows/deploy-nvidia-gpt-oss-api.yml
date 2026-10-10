@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/nvidia-gpt-oss-api/**'
+      - 'nvidia-gpt-oss-api/**'
       - '.github/workflows/deploy-nvidia-gpt-oss-api.yml'
   workflow_dispatch:
 
@@ -20,14 +20,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: scripts/nvidia-gpt-oss-api/package.json
+          cache-dependency-path: nvidia-gpt-oss-api/package.json
 
       - name: Install dependencies
-        working-directory: scripts/nvidia-gpt-oss-api
+        working-directory: nvidia-gpt-oss-api
         run: npm install
 
       - name: Configure OAuth registration for ChatGPT
-        working-directory: scripts/nvidia-gpt-oss-api
+        working-directory: nvidia-gpt-oss-api
         run: |
           set -euo pipefail
           # ChatGPT's connector is currently reaching this server with a CIMD
@@ -69,10 +69,10 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: scripts/nvidia-gpt-oss-api
+          workingDirectory: nvidia-gpt-oss-api
 
       - name: Set NVIDIA API secret on Cloudflare
-        working-directory: scripts/nvidia-gpt-oss-api
+        working-directory: nvidia-gpt-oss-api
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -83,7 +83,7 @@ jobs:
           printf '%s' "$NVIDIA_API_KEY" | npx wrangler secret put NVIDIA_API_KEY
 
       - name: Set internal OAuth signing secret on Cloudflare
-        working-directory: scripts/nvidia-gpt-oss-api
+        working-directory: nvidia-gpt-oss-api
         env:
           API_ACCESS_KEY: ${{ secrets.API_ACCESS_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

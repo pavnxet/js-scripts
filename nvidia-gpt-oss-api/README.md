@@ -78,7 +78,7 @@ Do **not** enter `NVIDIA_API_KEY` into ChatGPT.
 
 ## Deploy automatically
 
-GitHub Actions deploys this Worker when files under `scripts/nvidia-gpt-oss-api/` change.
+GitHub Actions deploys this Worker when files under `nvidia-gpt-oss-api/` change.
 
 Required GitHub Actions secrets:
 

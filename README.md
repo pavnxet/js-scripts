@@ -1,37 +1,40 @@
 # js-scripts
 
-A collection of small browser and JavaScript utility scripts. Most are paste-into-DevTools snippets
-or Tampermonkey userscripts; there is no build step and nothing to install.
+A flat collection of browser scripts, Tampermonkey userscripts, and small Cloudflare Worker
+projects. Each item lives in its **own top-level folder** with a dedicated `README.md`; this file is
+the index of everything in the repo.
 
 ---
 
 ## Repository structure
 
-Each script lives in its **own top-level folder** named after it, containing the script and a
-dedicated `README.md`:
-
 ```text
 js-scripts/
 ├── README.md                          <-- this file: an index of everything in the repo
-├── youtube-subscriptions-to-csv/
-│   ├── README.md
-│   └── youtube-subscriptions-to-csv.js
-└── <script-name>/
-    ├── README.md
-    └── <script-name>.js
+├── index.html                         <-- GitHub Pages dashboard (links to the items below)
+├── youtube-subscriptions-to-csv/      <-- browser script + README
+├── reddit-thread-extractor/           <-- userscript + README
+├── youtube-hide-upcoming/             <-- userscript + README
+├── nvidia-gpt-oss-api/                <-- Cloudflare Worker project
+├── thinking-mcp/                      <-- Cloudflare Worker project
+└── qr-print-station/                  <-- standalone web app
 ```
 
-**Adding a new script:** create a top-level folder named after the script
-(`my-new-script/`), place the script inside it, add a `README.md` describing what it does and how to
-run it, then list it in the index below.
+**Adding a new script:** create a top-level folder named after it (kebab-case), place the script and
+a `README.md` inside, then list it in the table below.
 
 ---
 
-## Scripts
+## Scripts & tools
 
-| Script | What it does | Where to run it |
+| Item | What it does | Where to run it |
 |---|---|---|
 | [`youtube-subscriptions-to-csv`](youtube-subscriptions-to-csv/) | Exports all rendered subscribed channels to CSV — canonical `UC...` ID, channel URL, and title. | `youtube.com/feed/channels` |
+| [`reddit-thread-extractor`](reddit-thread-extractor/) | Extracts a Reddit post + its comments/replies (auto-expanding) and exports JSON/CSV. | Tampermonkey, any `reddit.com` post |
+| [`youtube-hide-upcoming`](youtube-hide-upcoming/) | Hides Upcoming/Premiere/Scheduled cards on YouTube, with a Tampermonkey toggle. | Tampermonkey, `*.youtube.com` |
+| [`nvidia-gpt-oss-api`](nvidia-gpt-oss-api/) | OpenAI-compatible Cloudflare Worker proxy for NVIDIA's GPT-OSS-120B. | Deployed Worker |
+| [`thinking-mcp`](thinking-mcp/) | Remote MCP server (Cloudflare Worker) providing reasoning tools. | Deployed Worker |
+| [`qr-print-station`](qr-print-station/) | Browser A5 QR/image layout and print studio. | Web app, `./qr-print-station/` |
 
 ---
 
