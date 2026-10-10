@@ -143,4 +143,10 @@ Rules for the card:
   load. Just add the markup.
 - Reuse the existing classes (`.card`, `.icon`, `.meta`, `.tag`, `.open`, `.cardlinks`, `.mini`); do
   not invent bespoke inline styles.
+- The dashboard uses the **PAVNXET Liquid Glass** theme (warm aurora mesh + translucent surfaces).
+  Never hard-code colors: use the tokens in `:root`, and add any new token to **both** `:root` and
+  `[data-theme=dark]` so the light and dark variants stay correct.
+- Do not nest `backdrop-filter` — small pills (`.tag`, `.chip`, `.mini`, `kbd`) deliberately use
+  translucent gradients *without* blur, since they sit on already-blurred glass. Blur is reserved
+  for the major surfaces (`.nav`, `.card`, `.hero-card`, `.search`, `.terminal`, `.empty`).
 - The grid's closing `</div>` must stay **after** the last card. Insert new cards before it.
