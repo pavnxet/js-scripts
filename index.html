@@ -9,18 +9,41 @@
 :root{--bg:#fafafa;--fg:#09090b;--muted:#71717a;--line:#e4e4e7;--card:#fff;--soft:#f4f4f5;--primary:#18181b;--primaryfg:#fafafa;--accent:#2563eb;--shadow:0 1px 2px rgba(0,0,0,.04),0 14px 40px rgba(0,0,0,.06)}
 [data-theme=dark]{--bg:#09090b;--fg:#fafafa;--muted:#a1a1aa;--line:#27272a;--card:#111113;--soft:#18181b;--primary:#fafafa;--primaryfg:#18181b;--accent:#60a5fa;--shadow:0 14px 40px rgba(0,0,0,.24)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transition:background .25s,color .25s}.wrap{max-width:1180px;margin:auto;padding:0 24px}.nav{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(14px);z-index:20}.brand{display:flex;gap:10px;align-items:center}.logo{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--primary);color:var(--primaryfg);display:grid;place-items:center;font-weight:800;font-size:11px}.brand b{font-size:14px}.brand span{display:block;color:var(--muted);font-size:11px}.actions{display:flex;gap:8px}.btn{height:36px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:0 12px;cursor:pointer;font-weight:600;transition:.18s;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.btn:hover{background:var(--soft);transform:translateY(-1px)}.btn.primary{background:var(--primary);color:var(--primaryfg);border-color:var(--primary)}.hero{padding:78px 0 52px;display:grid;grid-template-columns:1.25fr .75fr;gap:60px;align-items:center}.eyebrow{display:inline-flex;border:1px solid var(--line);background:var(--soft);padding:5px 9px;border-radius:999px;color:var(--muted);font-size:11px;font-weight:650}.hero h1{font-size:clamp(40px,6vw,72px);line-height:.98;letter-spacing:-.06em;margin:18px 0}.hero p{font-size:16px;color:var(--muted);max-width:620px;margin:0 0 24px}.hero-card{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:20px;box-shadow:var(--shadow);animation:float 5s ease-in-out infinite}.terminal{background:#09090b;color:#fafafa;border-radius:12px;padding:18px;font:12px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace}.green{color:#86efac}.blue{color:#93c5fd}.muted{color:#71717a}.section{padding:28px 0 80px}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:18px}.section-head h2{margin:0;font-size:22px;letter-spacing:-.03em}.section-head p{margin:4px 0 0;color:var(--muted)}.search{width:260px;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);padding:0 12px;outline:0}.search:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent);border-color:var(--accent)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:18px;min-height:210px;display:flex;flex-direction:column;transition:.22s;box-shadow:0 1px 1px rgba(0,0,0,.02)}.card:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:#a1a1aa}.icon{width:42px;height:42px;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;background:var(--soft);font-weight:800;margin-bottom:18px}.card h3{margin:0 0 6px;font-size:16px}.card p{margin:0;color:var(--muted);font-size:13px}.meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}.tag{border:1px solid var(--line);background:var(--soft);padding:3px 7px;border-radius:999px;font-size:10px;color:var(--muted)}.open{margin-top:auto;padding-top:18px;display:flex;justify-content:space-between;align-items:center;gap:8px}.open a{color:var(--fg);font-weight:700;text-decoration:none}.open a:hover{text-decoration:underline}.arrow{transition:transform .18s}.card:hover .arrow{transform:translateX(4px)}.empty{display:none;padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px}.footer{border-top:1px solid var(--line);padding:28px 24px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@media(max-width:800px){.hero{grid-template-columns:1fr;padding-top:48px;gap:30px}.grid{grid-template-columns:1fr 1fr}.section-head{align-items:flex-start;gap:14px;flex-direction:column}.search{width:100%}}@media(max-width:520px){.wrap{padding:0 16px}.grid{grid-template-columns:1fr}.hero h1{font-size:44px}.actions .btn:not(:last-child){display:none}.nav{height:60px}}
+.card[hidden]{display:none!important}.card code{background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:0 4px;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.searchwrap{position:relative;display:flex;align-items:center}
+.search{padding-right:34px}
+.search-clear{position:absolute;right:8px;display:none;place-items:center;width:20px;height:20px;padding:0;border:0;border-radius:50%;background:var(--soft);color:var(--muted);cursor:pointer;font-size:11px;line-height:1}
+.search-clear.show{display:grid}
+.search-clear:hover{color:var(--fg)}
+.search-hint{display:inline-flex;gap:4px;align-items:center}
+kbd{border:1px solid var(--line);background:var(--soft);border-radius:4px;padding:1px 5px;font:600 10px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:.18s}
+.chip:hover{background:var(--soft);color:var(--fg)}
+.chip.active{background:var(--primary);color:var(--primaryfg);border-color:var(--primary)}
+.count{margin:0 0 14px;color:var(--muted);font-size:12px}
+.cardlinks{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.mini{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:.18s}
+.mini:hover{background:var(--soft);color:var(--fg);border-color:#a1a1aa}
+@media(max-width:800px){.toolbar{width:100%}.search-hint{display:none}}
 </style>
 </head>
 <body>
 <header class="nav"><div class="wrap" style="width:100%;display:flex;justify-content:space-between;align-items:center"><div class="brand"><div class="logo">JS</div><div><b>JS Scripts</b><span>Tools & experiments</span></div></div><div class="actions"><button class="btn" id="theme" type="button">◐ Theme</button><a class="btn" href="https://github.com/pavnxet/js-scripts" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div></div></header>
 <main class="wrap">
 <section class="hero"><div><span class="eyebrow">PERSONAL TOOLKIT · VANILLA JS</span><h1>Small scripts.<br>Useful tools.</h1><p>A clean home for browser tools, experiments, utilities and interactive projects built with plain JavaScript and HTML.</p><a class="btn primary" href="#apps">Explore tools ↓</a></div><div class="hero-card"><div class="terminal"><div><span class="green">$</span> ls ./js-scripts</div><div class="blue">youtube-subscriptions-to-csv/</div><div class="blue">reddit-thread-extractor/</div><div class="blue">youtube-hide-upcoming/</div><div class="blue">nvidia-gpt-oss-api/</div><div class="blue">thinking-mcp/</div><div class="blue">qr-print-station/</div><br><div><span class="green">$</span> status</div><div class="muted">ready · lightweight · browser-first</div></div></div></section>
-<section class="section" id="apps"><div class="section-head"><div><h2>Tools & projects</h2><p>Every card now points to a real hosted page or an existing GitHub file.</p></div><input class="search" id="search" placeholder="Search tools…" aria-label="Search tools"></div>
+<section class="section" id="apps"><div class="section-head"><div><h2>Tools &amp; projects</h2><p>Browser scripts, Tampermonkey userscripts and Cloudflare Workers — each in its own folder with a README.</p></div><div class="toolbar"><div class="searchwrap"><input class="search" id="search" type="search" placeholder="Search tools…" aria-label="Search tools"><button class="search-clear" id="search-clear" type="button" aria-label="Clear search">✕</button></div><span class="search-hint"><kbd>Ctrl</kbd><kbd>K</kbd></span></div></div>
+<div class="chips" id="chips" role="tablist" aria-label="Filter by type"><button class="chip active" type="button" data-type="all" role="tab" aria-selected="true">All</button><button class="chip" type="button" data-type="script" role="tab" aria-selected="false">Scripts</button><button class="chip" type="button" data-type="userscript" role="tab" aria-selected="false">Userscripts</button><button class="chip" type="button" data-type="worker" role="tab" aria-selected="false">Workers</button><button class="chip" type="button" data-type="webapp" role="tab" aria-selected="false">Web app</button><button class="chip" type="button" data-type="notes" role="tab" aria-selected="false">Notes</button></div>
+<p class="count" id="count"></p>
 <div class="grid" id="grid">
-<article class="card" data-name="qr print station qr printer a5 studio"><div class="icon">QR</div><h3>QR Print Station</h3><p>A5 QR-code layout and printing studio with grid editing, images, labels, export and print tools.</p><div class="meta"><span class="tag">HTML</span><span class="tag">QR</span><span class="tag">A5</span><span class="tag">Print</span></div><div class="open"><a href="./qr-print-station/">Open app <span class="arrow">→</span></a><span class="tag">WEB APP</span></div></article>
-<article class="card" data-name="thinking mcp deep think critic plan verify reasoning"><div class="icon">TH</div><h3>Thinking MCP</h3><p>MCP server project with structured reasoning tools for Deep Think, Critic, Plan and Verify workflows.</p><div class="meta"><span class="tag">MCP</span><span class="tag">Cloudflare</span><span class="tag">AI tooling</span></div><div class="open"><a href="https://github.com/pavnxet/js-scripts/tree/main/thinking-mcp" target="_blank" rel="noopener noreferrer">Open project <span class="arrow">→</span></a><span class="tag">REPO</span></div></article>
-<article class="card" data-name="reddit extractor script reddit"><div class="icon">RE</div><h3>Reddit Extractor</h3><p>JavaScript utility for extracting Reddit content and working with Reddit-oriented data.</p><div class="meta"><span class="tag">JavaScript</span><span class="tag">Script</span></div><div class="open"><a href="https://github.com/pavnxet/js-scripts/blob/main/reddit-thread-extractor/ultimate-reddit-extractor.js" target="_blank" rel="noopener noreferrer">Open script <span class="arrow">→</span></a><span class="tag">FILE</span></div></article>
-<article class="card" data-name="unit 2 formulas mathematics"><div class="icon">∑</div><h3>Unit 2 Formulas</h3><p>A repository note containing important mathematical formulas for quick reference.</p><div class="meta"><span class="tag">Markdown</span><span class="tag">Math</span></div><div class="open"><a href="https://github.com/pavnxet/js-scripts/blob/main/unit2-important-formulas.md" target="_blank" rel="noopener noreferrer">View notes <span class="arrow">→</span></a><span class="tag">GITHUB</span></div></article>
+<article class="card" data-name="qr print station qr printer a5 studio layout images labels export" data-type="webapp"><div class="icon">QR</div><h3>QR Print Station</h3><p>A5 QR-code layout and printing studio with grid editing, images, labels, export and print tools.</p><div class="meta"><span class="tag">HTML</span><span class="tag">QR</span><span class="tag">A5</span><span class="tag">Print</span></div><div class="open"><a href="./qr-print-station/">Open app <span class="arrow">→</span></a><span class="tag">WEB APP</span></div><div class="cardlinks"><a class="mini" href="https://github.com/pavnxet/js-scripts/tree/main/qr-print-station" target="_blank" rel="noopener noreferrer">README</a></div></article>
+<article class="card" data-name="thinking mcp deep think critic plan verify reasoning cloudflare worker ai" data-type="worker"><div class="icon">TH</div><h3>Thinking MCP</h3><p>Remote MCP server on Cloudflare Workers with structured reasoning tools for Deep Think, Critic, Plan and Verify workflows.</p><div class="meta"><span class="tag">MCP</span><span class="tag">Cloudflare</span><span class="tag">Worker</span><span class="tag">AI tooling</span></div><div class="open"><a href="https://github.com/pavnxet/js-scripts/tree/main/thinking-mcp" target="_blank" rel="noopener noreferrer">Open project <span class="arrow">→</span></a><span class="tag">WORKER</span></div><div class="cardlinks"><a class="mini" href="https://github.com/pavnxet/js-scripts/tree/main/thinking-mcp" target="_blank" rel="noopener noreferrer">README</a></div></article>
+<article class="card" data-name="reddit thread extractor comments replies json csv tampermonkey auto expand" data-type="userscript"><div class="icon">RE</div><h3>Reddit Thread Extractor</h3><p>Extracts a Reddit post together with its loaded comments and nested replies, auto-expanding “view more” controls, then exports JSON or CSV with a live progress bar.</p><div class="meta"><span class="tag">JavaScript</span><span class="tag">Reddit</span><span class="tag">JSON</span><span class="tag">Tampermonkey</span></div><div class="open"><a href="https://github.com/pavnxet/js-scripts/blob/main/reddit-thread-extractor/ultimate-reddit-extractor.js" target="_blank" rel="noopener noreferrer">Open script <span class="arrow">→</span></a><span class="tag">USERSCRIPT</span></div><div class="cardlinks"><button class="mini" type="button" data-copy="./reddit-thread-extractor/ultimate-reddit-extractor.js">⧉ Copy script</button><a class="mini" href="https://github.com/pavnxet/js-scripts/tree/main/reddit-thread-extractor" target="_blank" rel="noopener noreferrer">README</a></div></article>
+<article class="card" data-name="unit 2 formulas mathematics laplace inverse transform notes msc" data-type="notes"><div class="icon">∑</div><h3>Unit 2 Formulas</h3><p>A repository note containing important mathematical formulas for quick reference.</p><div class="meta"><span class="tag">Markdown</span><span class="tag">Math</span></div><div class="open"><a href="https://github.com/pavnxet/js-scripts/blob/main/unit2-important-formulas.md" target="_blank" rel="noopener noreferrer">View notes <span class="arrow">→</span></a><span class="tag">GITHUB</span></div></article>
+<article class="card" data-name="youtube subscriptions csv export channels uc id handle tampermonkey auto scroll" data-type="script userscript"><div class="icon">CSV</div><h3>YouTube Subscriptions → CSV</h3><p>Exports every subscribed channel — canonical <code>UC…</code> ID, URL and title — to CSV. Ships as a console snippet and a Tampermonkey userscript that auto-scrolls the whole list for you.</p><div class="meta"><span class="tag">JavaScript</span><span class="tag">CSV</span><span class="tag">YouTube</span><span class="tag">Tampermonkey</span></div><div class="open"><a href="https://github.com/pavnxet/js-scripts/blob/main/youtube-subscriptions-to-csv/youtube-subscriptions-to-csv.js" target="_blank" rel="noopener noreferrer">Open script <span class="arrow">→</span></a><span class="tag">SCRIPT</span></div><div class="cardlinks"><a class="mini" href="https://raw.githubusercontent.com/pavnxet/js-scripts/main/youtube-subscriptions-to-csv/youtube-subscriptions-to-csv.user.js">⤓ Install userscript</a><button class="mini" type="button" data-copy="./youtube-subscriptions-to-csv/youtube-subscriptions-to-csv.js">⧉ Copy snippet</button><a class="mini" href="https://github.com/pavnxet/js-scripts/tree/main/youtube-subscriptions-to-csv" target="_blank" rel="noopener noreferrer">README</a></div></article>
+<article class="card" data-name="youtube hide upcoming premiere scheduled cards tampermonkey toggle subscriptions" data-type="userscript"><div class="icon">YT</div><h3>YouTube Hide Upcoming</h3><p>Permanently hides Upcoming, Premiere and Scheduled video cards on YouTube, with multi-language detection and a Tampermonkey menu toggle to switch it off.</p><div class="meta"><span class="tag">JavaScript</span><span class="tag">YouTube</span><span class="tag">Tampermonkey</span></div><div class="open"><a href="https://github.com/pavnxet/js-scripts/blob/main/youtube-hide-upcoming/youtube-hide-upcoming.user.js" target="_blank" rel="noopener noreferrer">Open script <span class="arrow">→</span></a><span class="tag">USERSCRIPT</span></div><div class="cardlinks"><a class="mini" href="https://raw.githubusercontent.com/pavnxet/js-scripts/main/youtube-hide-upcoming/youtube-hide-upcoming.user.js">⤓ Install userscript</a><a class="mini" href="https://github.com/pavnxet/js-scripts/tree/main/youtube-hide-upcoming" target="_blank" rel="noopener noreferrer">README</a></div></article>
+<article class="card" data-name="nvidia gpt oss 120b api cloudflare worker openai compatible proxy oauth chatgpt mcp" data-type="worker"><div class="icon">NV</div><h3>NVIDIA GPT-OSS API</h3><p>OpenAI-compatible Cloudflare Worker proxy for NVIDIA-hosted GPT-OSS-120B, with OAuth 2.1 authorization so it can serve as a ChatGPT MCP connector.</p><div class="meta"><span class="tag">Cloudflare</span><span class="tag">Worker</span><span class="tag">OpenAI API</span><span class="tag">OAuth</span></div><div class="open"><a href="https://github.com/pavnxet/js-scripts/tree/main/nvidia-gpt-oss-api" target="_blank" rel="noopener noreferrer">Open project <span class="arrow">→</span></a><span class="tag">WORKER</span></div><div class="cardlinks"><a class="mini" href="https://github.com/pavnxet/js-scripts/tree/main/nvidia-gpt-oss-api" target="_blank" rel="noopener noreferrer">README</a></div></article>
 </div><div class="empty" id="empty">No matching tools found.</div></section>
 </main>
 <footer class="footer wrap"><span>JS Scripts · built for the browser</span><span>Hosted with GitHub Pages</span></footer>
@@ -29,26 +52,86 @@
   const root=document.documentElement;
   const themeButton=document.getElementById('theme');
   const input=document.getElementById('search');
+  const clearButton=document.getElementById('search-clear');
+  const chips=[...document.querySelectorAll('.chip')];
   const cards=[...document.querySelectorAll('.card')];
   const empty=document.getElementById('empty');
+  const count=document.getElementById('count');
+  let activeType='all';
+
+  // --- theme: remembered choice, otherwise follow the OS ---
   let saved=null;
   try{saved=localStorage.getItem('js-scripts-theme')}catch{}
-  if(saved==='dark'||saved==='light')root.dataset.theme=saved;
+  if(saved==='dark'||saved==='light'){
+    root.dataset.theme=saved;
+  }else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches){
+    root.dataset.theme='dark';
+  }
   themeButton.addEventListener('click',()=>{
     const next=root.dataset.theme==='dark'?'light':'dark';
     root.dataset.theme=next;
     try{localStorage.setItem('js-scripts-theme',next)}catch{}
   });
-  input.addEventListener('input',()=>{
+
+  // --- search + category filtering (combined) ---
+  function applyFilters(){
     const q=input.value.trim().toLowerCase();
-    let count=0;
+    let shown=0;
     cards.forEach(card=>{
-      const show=!q||card.dataset.name.toLowerCase().includes(q);
+      const haystack=((card.dataset.name||'')+' '+card.textContent).toLowerCase();
+      const matchesText=!q||haystack.includes(q);
+      const matchesType=activeType==='all'||(card.dataset.type||'').split(/\s+/).includes(activeType);
+      const show=matchesText&&matchesType;
       card.hidden=!show;
-      if(show)count++;
+      if(show)shown++;
     });
-    empty.style.display=count?'none':'block';
+    count.textContent=shown===cards.length?cards.length+' tools':'Showing '+shown+' of '+cards.length+' tools';
+    empty.style.display=shown?'none':'block';
+    clearButton.classList.toggle('show',!!q);
+  }
+
+  input.addEventListener('input',applyFilters);
+  clearButton.addEventListener('click',()=>{input.value='';input.focus();applyFilters()});
+  chips.forEach(chip=>chip.addEventListener('click',()=>{
+    activeType=chip.dataset.type;
+    chips.forEach(c=>{
+      const active=c===chip;
+      c.classList.toggle('active',active);
+      c.setAttribute('aria-selected',String(active));
+    });
+    applyFilters();
+  }));
+
+  // --- keyboard shortcuts: Ctrl/Cmd+K or "/" to focus, Esc to clear ---
+  document.addEventListener('keydown',event=>{
+    const typing=document.activeElement===input;
+    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){
+      event.preventDefault();input.focus();input.select();
+    }else if(event.key==='/'&&!typing){
+      event.preventDefault();input.focus();
+    }else if(event.key==='Escape'&&typing){
+      input.value='';input.blur();applyFilters();
+    }
   });
+
+  // --- copy-to-clipboard buttons (fetch same-origin, then copy) ---
+  document.querySelectorAll('[data-copy]').forEach(button=>{
+    const label=button.textContent;
+    button.addEventListener('click',async()=>{
+      try{
+        const response=await fetch(button.dataset.copy,{cache:'no-store'});
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        await navigator.clipboard.writeText(await response.text());
+        button.textContent='Copied ✓';
+      }catch(error){
+        console.error('[dashboard] copy failed',error);
+        button.textContent='Copy failed';
+      }
+      setTimeout(()=>{button.textContent=label},1600);
+    });
+  });
+
+  applyFilters();
 })();
 </script>
 </body>
