@@ -123,27 +123,36 @@ add, rename or remove an item, update the dashboard **in the same commit** — t
   <div class="icon">XX</div>
   <h3>Display Name</h3>
   <p>One or two sentences on what it does.</p>
-  <div class="meta"><span class="tag">JavaScript</span><span class="tag">YouTube</span></div>
-  <div class="open"><a href="https://github.com/pavnxet/js-scripts/tree/main/<folder>" target="_blank" rel="noopener noreferrer">Open project <span class="arrow">→</span></a><span class="tag">USERSCRIPT</span></div>
-  <div class="cardlinks"><a class="mini" href="https://github.com/pavnxet/js-scripts/tree/main/<folder>" target="_blank" rel="noopener noreferrer">README</a></div>
+  <div class="meta"><span class="tag">Userscript</span><span class="tag">JavaScript</span><span class="tag">YouTube</span></div>
+  <div class="open"><a href="https://github.com/pavnxet/js-scripts/tree/main/<folder>" target="_blank" rel="noopener noreferrer">Open project <span class="arrow">→</span></a><span class="open-actions"><a class="mini" href="https://github.com/pavnxet/js-scripts/tree/main/<folder>" target="_blank" rel="noopener noreferrer">README</a></span></div>
 </article>
 ```
 
 Rules for the card:
 
+- **All tags live in `.meta` — including the type tag** (`Script` / `Userscript` / `Worker` / `Web app` /
+  `Notes`). Nothing tag-shaped goes in the footer: that is what keeps every card's tag row in one place
+  instead of staggering up and down.
 - `data-type` drives the filter chips — use one or more of `script`, `userscript`, `worker`,
   `webapp`, `notes`, space-separated. An item that is both a snippet and a userscript gets both.
 - `data-name` is the **search index**: lowercase name + description keywords + tags. A card without
   it becomes unsearchable.
-- Every card needs a **README link** in `.cardlinks`.
+- The footer (`.open`) holds the primary link on the left and `.open-actions` pills on the right, and
+  **must stay one line**. `.meta` is bottom-anchored (`margin-top: auto`), which is what lines every
+  card's footer up regardless of description length or tag count. Keep it to **at most 3 action pills**
+  and short labels — the widest footer must fit in roughly 290px.
+- Every card needs a **README link** in `.open-actions`.
 - Userscripts (`*.user.js`) also get an install link to the raw URL:
-  `https://raw.githubusercontent.com/pavnxet/js-scripts/main/<folder>/<file>.user.js`.
+  `https://raw.githubusercontent.com/pavnxet/js-scripts/main/<folder>/<file>.user.js` — label it
+  `⤓ Install`.
 - Paste-in scripts also get a copy button:
-  `<button class="mini" type="button" data-copy="./<folder>/<file>.js">⧉ Copy snippet</button>`.
+  `<button class="mini" type="button" data-copy="./<folder>/<file>.js">⧉ Copy</button>`.
 - **No JavaScript changes are needed** — the dashboard script auto-discovers `.card` elements on
   load. Just add the markup.
-- Reuse the existing classes (`.card`, `.icon`, `.meta`, `.tag`, `.open`, `.cardlinks`, `.mini`); do
+- Reuse the existing classes (`.card`, `.icon`, `.meta`, `.tag`, `.open`, `.open-actions`, `.mini`); do
   not invent bespoke inline styles.
+- The grid uses `repeat(auto-fill, minmax(310px, 1fr))`, so cards never get too narrow for a
+  one-line footer. Do not switch it back to a fixed `repeat(3, 1fr)`.
 - The dashboard uses the **PAVNXET Liquid Glass v2 (advanced)** theme — a warm aurora mesh under
   translucent, refracting glass surfaces. Never hard-code colours: use the tokens in `:root`, and add
   any new token to **both** `:root` and `[data-theme=dark]` so the light and dark variants stay correct.
