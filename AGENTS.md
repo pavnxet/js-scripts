@@ -104,6 +104,7 @@ Follow these steps in order:
 | `reddit-thread-extractor/` | userscript | — |
 | `reddit-sidebar-resizer/` | snippet + userscript | — |
 | `youtube-hide-upcoming/` | userscript | — |
+| `youtube-studio-upload-notifier/` | userscript | — |
 | `nvidia-gpt-oss-api/` | Cloudflare Worker | `.github/workflows/deploy-nvidia-gpt-oss-api.yml` |
 | `thinking-mcp/` | Cloudflare Worker | `.github/workflows/deploy-thinking-mcp.yml` |
 | `qr-print-station/` | web app | — |
