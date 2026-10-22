@@ -15,6 +15,7 @@ js-scripts/
 ├── youtube-subscriptions-to-csv/      <-- browser script + README
 ├── reddit-thread-extractor/           <-- userscript + README
 ├── youtube-hide-upcoming/             <-- userscript + README
+├── youtube-studio-upload-notifier/   <-- userscript + README
 ├── nvidia-gpt-oss-api/                <-- Cloudflare Worker project
 ├── thinking-mcp/                      <-- Cloudflare Worker project
 └── qr-print-station/                  <-- standalone web app
@@ -33,6 +34,7 @@ a `README.md` inside, then list it in the table below.
 | [`reddit-thread-extractor`](reddit-thread-extractor/) | Extracts a Reddit post + its comments/replies (auto-expanding) and exports JSON/CSV. | Tampermonkey, any `reddit.com` post |
 | [`reddit-sidebar-resizer`](reddit-sidebar-resizer/) | Adds a draggable divider to resize Reddit's right sidebar; the width is saved in `localStorage`. Console snippet + Tampermonkey userscript. | Tampermonkey or console, `reddit.com` |
 | [`youtube-hide-upcoming`](youtube-hide-upcoming/) | Hides Upcoming/Premiere/Scheduled cards on YouTube, with a Tampermonkey toggle. | Tampermonkey, `*.youtube.com` |
+| [`youtube-studio-upload-notifier`](youtube-studio-upload-notifier/) | Desktop notification with a looping custom sound when a batch of uploads finishes in YouTube Studio. | Tampermonkey, `studio.youtube.com` |
 | [`nvidia-gpt-oss-api`](nvidia-gpt-oss-api/) | OpenAI-compatible Cloudflare Worker proxy for NVIDIA's GPT-OSS-120B. | Deployed Worker |
 | [`thinking-mcp`](thinking-mcp/) | Remote MCP server (Cloudflare Worker) providing reasoning tools. | Deployed Worker |
 | [`qr-print-station`](qr-print-station/) | Browser A5 QR/image layout and print studio. | Web app, `./qr-print-station/` |
